@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title><%= title %></title>
+<meta name="description" content="<%= desc %>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- SEO -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="<%= title %>">
+<meta property="og:description" content="<%= desc %>">
+<meta property="og:image" content="/seo.jpg">
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- Remix Icon -->
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- AOS -->
+<link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+
+<link rel="stylesheet" href="/css/custom.css">
+</head>
+
+<body class="bg-black text-white font-inter">
+
+<header class="fixed top-0 w-full z-50 navbar-glass">
+  <div class="flex justify-between items-center px-6 py-4">
+    <a href="/" class="logo">DramaFlix</a>
+    <i class="ri-search-line text-xl"></i>
+  </div>
+</header>
+
+<div class="h-20"></div>
+<main><%- body %></main>
+
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>AOS.init()</script>
+</body>
+</html>
