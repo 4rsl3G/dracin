@@ -1,0 +1,23 @@
+<div class="h-screen flex justify-center items-center bg-black">
+  <div class="relative w-[360px] h-[640px] bg-black">
+
+    <video
+      id="player"
+      class="w-full h-full object-cover"
+      autoplay
+      muted
+      playsinline
+      controls
+      preload="auto">
+      <source src="VIDEO_URL_API" type="video/mp4">
+    </video>
+
+    <!-- Overlay -->
+    <div class="absolute top-2 right-2">
+      <button class="bg-black/50 px-3 py-1 rounded">HD</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="/js/player.js"></script>
