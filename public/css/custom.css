@@ -1,0 +1,14 @@
+.font-inter { font-family: 'Inter', sans-serif; }
+.logo { font-family: 'Bebas Neue'; font-size: 32px; color:#e50914; }
+
+.navbar-glass {
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(12px);
+}
+
+.card {
+  transition:.35s;
+}
+.card:hover {
+  transform: scale(1.15);
+}
