@@ -1,42 +1,73 @@
-const express = require('express');
-const axios = require('axios');
-const layouts = require('express-ejs-layouts');
+const express = require("express");
+const axios = require("axios");
+const path = require("path");
+const expressLayouts = require("express-ejs-layouts");
 
 const app = express();
-app.use(express.static('public'));
-app.set('view engine', 'ejs');
-app.use(layouts);
-app.set('layout', 'layout');
+const PORT = 3000;
 
-const API = 'https://netshort.sansekai.my.id';
+// ===== Middleware =====
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
 
-/* HOME */
-app.get('/', async (req, res) => {
-  const search = await axios.post(`${API}/search`, {
-    language: 'id_ID',
-    searchCode: ['ceo']
-  });
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+app.use(expressLayouts);
+app.set("layout", "layouts/main");
 
-  res.render('home', {
-    title: 'Streaming Drama Pendek Terbaru',
-    desc: 'Nonton drama pendek vertikal eksklusif, update setiap hari',
-    dramas: search.data.searchCodeSearchResult
-  });
-});
+// ===== API BASE =====
+const API_BASE = "https://netshort.sansekai.my.id/api";
 
-/* DETAIL */
-app.get('/detail/:id', (req, res) => {
-  res.render('detail', {
-    title: 'Nonton Drama Episode Lengkap',
-    desc: 'Streaming drama pendek kualitas HD',
-    id: req.params.id
+// ===== HOME =====
+app.get("/", async (req, res) => {
+  const { data } = await axios.get(`${API_BASE}/foryou`);
+  res.render("home", {
+    title: "Streaming Drama Pendek",
+    dramas: data.contentInfos
   });
 });
 
-/* API DETAIL */
-app.get('/api/detail/:id', async (req, res) => {
-  const data = await axios.get(`${API}/shortPlay/detail?shortPlayId=${req.params.id}`);
-  res.json(data.data);
+// ===== SEARCH (GET for SEO) =====
+app.get("/search", async (req, res) => {
+  const q = req.query.q;
+  if (!q) return res.render("search", { results: [], q: "" });
+
+  const { data } = await axios.post(`${API_BASE}/search`, {
+    keyword: q,
+    language: "id_ID"
+  });
+
+  res.render("search", {
+    q,
+    results: data.searchCodeSearchResult
+  });
 });
 
-app.listen(3000, () => console.log('🔥 Server jalan http://localhost:3000'));
+// ===== SEARCH (POST for SPA) =====
+app.post("/search", async (req, res) => {
+  try {
+    const { q } = req.body;
+    const { data } = await axios.post(`${API_BASE}/search`, {
+      keyword: q,
+      language: "id_ID"
+    });
+    res.json(data.searchCodeSearchResult);
+  } catch (e) {
+    res.status(500).json({ error: true });
+  }
+});
+
+// ===== WATCH =====
+app.get("/watch/:id", async (req, res) => {
+  const id = req.params.id;
+  res.render("watch", {
+    title: "Watch Drama",
+    id
+  });
+});
+
+// ===== START =====
+app.listen(PORT, () => {
+  console.log(`🔥 Server jalan http://localhost:${PORT}`);
+});
