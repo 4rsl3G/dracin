@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <%- include('../partials/head') %>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-black dark:text-gray-200 min-h-screen flex flex-col font-sans selection:bg-gray-800 selection:text-white">
+
+  <%- include('../partials/header') %>
+
+  <main id="app" class="flex-grow w-full max-w-4xl mx-auto px-4 py-6 mb-16 md:mb-0 transition-opacity duration-200">
+    <%- body %>
+  </main>
+
+  <%- include('../partials/bottomnav') %>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/router.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/player.js"></script>
+</body>
+</html>
