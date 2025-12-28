@@ -1,15 +1,18 @@
 <!DOCTYPE html>
-<html lang="<%= activeLang %>">
+<html lang="<%= typeof activeLang !== 'undefined' ? activeLang : 'en' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - PansaDrama</title>
+    <title><%= title %> - StreamSimple</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="/css/custom.css">
+    
+    <%- style %>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased">
     
@@ -32,5 +35,7 @@
     </div>
 
     <script src="/js/app.js"></script>
+    
+    <%- script %>
 </body>
 </html>
