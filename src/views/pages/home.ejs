@@ -1,38 +1,15 @@
-<div class="mb-6 flex items-center justify-between">
-    <h2 class="text-xl font-semibold text-gray-800"><%= title %></h2>
-</div>
-
-<% if (typeof error !== 'undefined') { %>
-    <div class="bg-red-50 text-red-600 p-4 rounded-lg text-center mb-6 border border-red-100">
-        <%= error %>
-        <br>
-        <button onclick="window.location.reload()" class="mt-2 text-sm underline hover:text-red-800">Try Again</button>
+<div id="home-view" class="space-y-8">
+  <section>
+    <h2 class="text-xl font-bold mb-4 tracking-tight">For You</h2>
+    <div id="foryou-container" class="grid grid-cols-3 md:grid-cols-5 gap-3">
+      <%- include('../partials/skeleton') %>
     </div>
-<% } %>
-
-<% if (shows.length === 0 && typeof error === 'undefined') { %>
-    <div class="text-center py-20 text-gray-400">
-        <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
-        <p>No content available.</p>
+  </section>
+  
+  <section>
+    <h2 class="text-xl font-bold mb-4 tracking-tight">New Arrivals</h2>
+    <div id="new-container" class="grid grid-cols-3 md:grid-cols-5 gap-3">
     </div>
-<% } %>
-
-<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-    <% shows.forEach(function(show) { %>
-        <a href="/show/<%= show.code %>" class="spa-link group block">
-            <div class="relative aspect-[3/4] bg-gray-200 rounded-lg overflow-hidden border border-gray-200 shadow-sm transition-all group-hover:shadow-md group-hover:border-gray-300">
-                <% if (show.cover) { %>
-                    <img src="<%= show.cover %>" alt="<%= show.name %>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
-                <% } else { %>
-                    <div class="flex items-center justify-center w-full h-full text-gray-400 bg-gray-100">
-                        <i class="fa-solid fa-image text-2xl"></i>
-                    </div>
-                <% } %>
-                <div class="absolute top-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm">
-                    <%= show.episodes || 0 %> EPS
-                </div>
-            </div>
-            <h3 class="mt-2 text-sm font-medium text-gray-900 truncate group-hover:text-blue-600"><%= show.name %></h3>
-        </a>
-    <% }); %>
+    <div id="sentinel" class="h-10 w-full"></div>
+  </section>
 </div>
