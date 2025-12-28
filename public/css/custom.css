@@ -1,14 +1,27 @@
-.font-inter { font-family: 'Inter', sans-serif; }
-.logo { font-family: 'Bebas Neue'; font-size: 32px; color:#e50914; }
-
-.navbar-glass {
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(12px);
+/* Animation for PJAX */
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
 }
 
-.card {
-  transition:.35s;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-.card:hover {
-  transform: scale(1.15);
+
+/* Scrollbar refinement */
+::-webkit-scrollbar {
+    width: 6px;
 }
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Utility to hide things cleanly */
+.hidden { display: none !important; }
