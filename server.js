@@ -3,7 +3,7 @@ const expressLayouts = require('express-ejs-layouts');
 const path = require('path');
 const compression = require('compression');
 const fetch = require('node-fetch'); 
-const https = require('https'); // TAMBAHAN: Untuk konfigurasi network
+const https = require('https'); // PENTING: Untuk fix network VPS
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,50 +28,60 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- PROXY HELPER (FIX VPS HANG) ---
+// --- PROXY ENGINE (VPS FIX) ---
 const API_BASE = 'https://d.sapimu.au/api';
 
-// 1. AGENT KHUSUS VPS: Paksa IPv4 & Ignore SSL
-const httpsAgent = new https.Agent({
-    family: 4, // PENTING: Paksa pakai IPv4 (Solusi anti-hang di VPS)
+// AGENT KHUSUS: Paksa IPv4 dan abaikan error SSL ketat
+const vpsAgent = new https.Agent({
+    family: 4, 
     rejectUnauthorized: false,
-    keepAlive: true,
-    timeout: 10000
+    keepAlive: true
 });
 
 const PROXY_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Content-Type': 'application/json',
+    'Accept': 'application/json', // Pastikan minta JSON
     'Referer': 'https://d.sapimu.au/',
     'Origin': 'https://d.sapimu.au'
 };
 
 async function fetchUpstream(endpoint) {
     const url = API_BASE + endpoint;
-    console.log(`[REQ] -> ${url}`); // Log awal
+    // Log request agar terlihat di terminal
+    console.log(`[REQ] -> ${url}`); 
     
     try {
-        // Tambahkan 'agent: httpsAgent'
         const response = await fetch(url, { 
             headers: PROXY_HEADERS, 
-            agent: httpsAgent,
-            timeout: 10000 
+            agent: vpsAgent, // Gunakan agent IPv4
+            timeout: 15000 
         });
         
-        console.log(`[RES] <- ${response.status} ${url}`); // Log balasan
+        console.log(`[RES] <- ${response.status} : ${url}`); // Log status
 
         if (!response.ok) {
-            return { code: response.status, data: null, msg: "Upstream Error" };
+            return { code: response.status, data: null, message: "Upstream Error" };
         }
-        return await response.json();
+
+        const json = await response.json();
+        
+        // NORMALISASI: Pastikan format selalu { code: 200, data: ... }
+        // Jaga-jaga jika API mengembalikan data mentah
+        if (json.data) {
+            return json; // Format sudah benar
+        } else {
+            return { code: 200, data: json }; // Bungkus data mentah
+        }
+
     } catch (error) {
-        console.error(`[ERR] ${error.message} on ${url}`); // Log error
-        // Return dummy data kosong agar tidak loading selamanya
-        return { code: 500, message: 'Connection Timeout', data: { list: [] } };
+        console.error(`[ERR] ${error.message} on ${url}`);
+        // Return JSON kosong biar gak hang
+        return { code: 500, message: 'Server Timeout', data: { list: [] } };
     }
 }
 
-// --- API ROUTES ---
+// --- ROUTES ---
 
 app.get('/api/foryou/:page?', async (req, res) => {
     const page = req.params.page || req.query.page || 1;
@@ -120,7 +130,7 @@ app.post('/api/player', async (req, res) => {
         const response = await fetch(`${API_BASE}/watch/player?lang=in`, {
             method: 'POST',
             headers: PROXY_HEADERS,
-            agent: httpsAgent, // Pakai agent juga di sini
+            agent: vpsAgent,
             body: JSON.stringify({ bookId, chapterIndex: parseInt(chapterIndex), lang: 'in' })
         });
         const data = await response.json();
@@ -131,7 +141,7 @@ app.post('/api/player', async (req, res) => {
     }
 });
 
-// --- PAGE ROUTES ---
+// --- PAGES ---
 const pages = require('./src/routes/pages'); 
 app.use('/', pages);
 
