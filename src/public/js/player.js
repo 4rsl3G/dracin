@@ -1,26 +1,37 @@
 window.initDetail = function(bookId) {
   if(!bookId) return;
   
-  // 1. Detail
   $.get(`/api/book/${bookId}/detail`, function(res) {
-    if(res.code === 200) {
-      const b = res.data;
+    if(res.code === 200 || (res.data)) {
+      // Cek apakah data ada di res.data atau langsung di res
+      const b = res.data || res;
+      
+      // FIX MAPPING DISINI JUGA
+      const title = b.bookName || b.book_name;
+      const cover = b.cover || b.cover_url;
+      const tags = b.tags ? (Array.isArray(b.tags) ? b.tags : b.tags.split(',')) : [];
+
       $('#book-info').html(`
-        <h1 class="text-xl md:text-2xl font-bold mb-2 text-gray-900 dark:text-white leading-tight">${b.book_name}</h1>
+        <h1 class="text-xl md:text-2xl font-bold mb-2 text-gray-900 dark:text-white leading-tight">${title}</h1>
         <div class="flex flex-wrap gap-2 mb-3">
-           ${b.tags ? b.tags.split(',').map(t => `<span class="text-[10px] px-2 py-0.5 bg-gray-200 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-700">${t}</span>`).join('') : ''}
+           ${tags.map(t => `<span class="text-[10px] px-2 py-0.5 bg-gray-200 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-700">${t}</span>`).join('')}
         </div>
-        <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">${b.summary}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">${b.introduction || b.summary || "Tidak ada sinopsis"}</p>
       `);
       
-      window.currentBookMeta = { id: b.id, title: b.book_name, cover: b.cover_url };
+      window.currentBookMeta = { bookId: b.bookId || bookId, title: title, cover: cover };
     }
   });
 
-  // 2. Chapters
   $.get(`/api/book/${bookId}/chapters`, function(res) {
-    if(res.code === 200) {
-      window.chapters = res.data.chapters || [];
+    // List chapter biasanya di res.data.chapterList atau res.data.chapters
+    let chapters = [];
+    if(res.data && Array.isArray(res.data)) chapters = res.data;
+    else if(res.data && res.data.chapterList) chapters = res.data.chapterList;
+    else if(res.data && res.data.chapters) chapters = res.data.chapters;
+
+    if(chapters.length > 0) {
+      window.chapters = chapters;
       const saved = getProgress(bookId);
       const startIdx = saved ? saved.chapterIndex : 0;
       
@@ -32,7 +43,7 @@ window.initDetail = function(bookId) {
 
 function renderChapters(list, activeIdx) {
   const html = list.map((c, i) => `
-    <button onclick="loadPlayer('${window.currentBookMeta.id}', ${i})" 
+    <button onclick="loadPlayer('${window.currentBookMeta.bookId}', ${i})" 
       class="h-10 w-full flex items-center justify-center text-xs font-semibold rounded border transition-all duration-200
       ${i == activeIdx 
         ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-md scale-105' 
@@ -60,8 +71,11 @@ window.loadPlayer = async function(bookId, chapterIndex) {
       data: JSON.stringify({ bookId, chapterIndex })
     });
     
-    if (res.code === 200 && res.data && res.data.url) {
-      video.src = res.data.url;
+    // Cek URL video
+    const videoUrl = res.data ? (res.data.url || res.data) : null;
+
+    if (videoUrl && typeof videoUrl === 'string') {
+      video.src = videoUrl;
       video.load();
       status.style.display = 'none';
       
