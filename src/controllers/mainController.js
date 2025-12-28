@@ -1,3 +1,5 @@
+// (Code sama dengan sebelumnya, tidak perlu diubah karena res.render('pages/home')
+//  sekarang otomatis dilayani oleh layout middleware).
 const api = require('../services/apiClient');
 
 const getCommonData = async (req) => {
@@ -16,10 +18,6 @@ exports.home = async (req, res) => {
     } else {
         shows = await api.getHome(lang);
     }
-
-    // Handle AJAX request specifically if needed, but 
-    // strictly per requirement we use PJAX which loads full HTML 
-    // and extracts body on client. So we just render normally.
     
     res.render('pages/home', { 
         title: q ? `Search: ${q}` : 'Home', 
@@ -33,12 +31,7 @@ exports.home = async (req, res) => {
 exports.showDetail = async (req, res) => {
     const { lang, languages } = await getCommonData(req);
     const { code } = req.params;
-
     const episodes = await api.getEpisodes(code, lang);
-    
-    // API limitation: Episodes endpoint doesn't return Title/Cover.
-    // Strategy: Try fetching generic info from Play API for ep 1 to get metadata
-    // or fallback to query params if client passed them (optional optimization)
     let meta = { name: 'Unknown Title', cover: '', total: episodes.length };
     
     const playData = await api.getPlay(code, 1, lang);
@@ -61,7 +54,6 @@ exports.player = async (req, res) => {
     const { lang, languages } = await getCommonData(req);
     const { code } = req.params;
     const ep = req.query.ep || 1;
-
     const playData = await api.getPlay(code, ep, lang);
     
     if (!playData) {
@@ -75,7 +67,7 @@ exports.player = async (req, res) => {
     }
 
     res.render('pages/player', {
-        title: `Watching: ${playData.name} - Ep ${playData.episode}`,
+        title: `Watching: ${playData.name}`,
         data: playData,
         code,
         languages,
