@@ -11,6 +11,10 @@ const pages = require('./src/routes/pages');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// FIX: Trust Proxy setting (WAJIB ADA untuk express-rate-limit di belakang proxy)
+// Angka 1 berarti percaya pada 1 hop reverse proxy (misal Nginx/Load Balancer)
+app.set('trust proxy', 1);
+
 app.use(compression());
 
 app.use(helmet({
@@ -18,10 +22,22 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+// Rate Limiter
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 100
+  windowMs: 1 * 60 * 1000, // 1 menit
+  max: 100, // limit setiap IP ke 100 request per windowMs
+  standardHeaders: true, // Return rate limit info di `RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  // Handler opsional jika limit tercapai (biar tidak crash client)
+  handler: (req, res) => {
+    res.status(429).json({
+      code: 429,
+      message: 'Too many requests, please try again later.'
+    });
+  }
 });
+
+// Apply rate limiter ke semua request
 app.use(limiter);
 
 app.set('view engine', 'ejs');
@@ -34,6 +50,7 @@ app.use(express.static(path.join(__dirname, 'src/public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware untuk handle Layout EJS vs AJAX
 app.use((req, res, next) => {
   if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
     app.set('layout', false);
@@ -43,9 +60,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Routes
 app.use('/api', apiProxy);
 app.use('/', pages);
 
+// 404 Handler
 app.use((req, res) => {
   res.status(404).render('pages/404', { title: '404 - Not Found' });
 });
