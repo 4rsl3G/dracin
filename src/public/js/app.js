@@ -1,12 +1,16 @@
 // Init Home
 window.initHome = function() {
-  // Panggil Proxy Lokal
+  console.log("Memuat Home via Local Proxy...");
+  
+  // Panggil route local server.js
   $.get('/api/foryou', function(data) {
-    if(data.code === 200) {
+    if(data && data.code === 200) {
         renderGrid(data.data.list, '#foryou-container');
     } else {
-        $('#foryou-container').html('<div class="text-center p-4 text-gray-500">Gagal memuat data.</div>');
+        $('#foryou-container').html('<div class="text-center p-4 text-gray-500">Gagal memuat data dari server.</div>');
     }
+  }).fail(function() {
+      $('#foryou-container').html('<div class="text-center p-4 text-red-500">Koneksi Server Error.</div>');
   });
 
   let page = 1;
@@ -70,10 +74,10 @@ window.initHistory = function() {
     const html = hist.map(h => `
       <a href="/watch/${h.bookId}" class="nav-link flex gap-4 p-3 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors">
         <div class="w-20 h-28 bg-gray-300 bg-cover rounded flex-shrink-0" style="background-image:url(${h.cover})"></div>
-        <div class="flex flex-col py-1">
+        <div class="flex flex-col py-1 justify-center">
            <h3 class="font-bold text-gray-900 dark:text-gray-100 line-clamp-2 text-sm">${h.title}</h3>
            <p class="text-xs text-gray-500 mt-1">Episode ${h.chapterIndex + 1}</p>
-           <div class="mt-auto">
+           <div class="mt-2">
              <span class="text-[10px] px-2 py-1 bg-black text-white dark:bg-white dark:text-black rounded">Lanjutkan</span>
            </div>
         </div>
@@ -85,7 +89,7 @@ window.initHistory = function() {
   }
 };
 
-// Helper Render
+// Helper Render (Grid Poster)
 function renderGrid(list, selector, append = false) {
   if(!list || list.length === 0) return;
   
