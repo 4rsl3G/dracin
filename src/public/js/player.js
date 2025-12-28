@@ -1,7 +1,7 @@
 window.initDetail = function(bookId) {
   if(!bookId) return;
   
-  // 1. Get Detail via Proxy
+  // 1. Detail
   $.get(`/api/book/${bookId}/detail`, function(res) {
     if(res.code === 200) {
       const b = res.data;
@@ -17,7 +17,7 @@ window.initDetail = function(bookId) {
     }
   });
 
-  // 2. Get Chapters via Proxy
+  // 2. Chapters
   $.get(`/api/book/${bookId}/chapters`, function(res) {
     if(res.code === 200) {
       window.chapters = res.data.chapters || [];
@@ -53,7 +53,6 @@ window.loadPlayer = async function(bookId, chapterIndex) {
   status.innerHTML = '<div class="loader w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>';
 
   try {
-    // POST ke Server Lokal
     const res = await $.ajax({
       url: '/api/player',
       type: 'POST',
@@ -80,7 +79,6 @@ window.loadPlayer = async function(bookId, chapterIndex) {
       throw new Error('No URL');
     }
   } catch (e) {
-    console.error(e);
     status.innerHTML = `<div class="text-center"><p class="text-white text-sm mb-2">Gagal memuat video</p><button onclick="loadPlayer('${bookId}',${chapterIndex})" class="text-xs bg-white text-black px-3 py-1 rounded">Retry</button></div>`;
   }
 };
