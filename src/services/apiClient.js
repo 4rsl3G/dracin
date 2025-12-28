@@ -1,51 +1,78 @@
-const axios = require('axios');
+const fetch = require('node-fetch');
 
-const BASE_URL = 'https://sm.sapimu.au/api/v1';
-
-const client = axios.create({
-    baseURL: BASE_URL,
-    timeout: 5000 // 5 seconds
-});
-
-// Retry logic interceptor (1x retry)
-client.interceptors.response.use(null, async (error) => {
-    const { config, message } = error;
-    if (!config || !config.retry) {
-        config.retry = true;
-        return client(config);
-    }
-    return Promise.reject(error);
-});
-
-module.exports = {
-    getLanguages: async () => {
-        try {
-            const res = await client.get('/languages');
-            return res.data.data || [];
-        } catch (e) { return []; }
-    },
-    getHome: async (lang) => {
-        try {
-            const res = await client.get(`/home?lang=${lang}`);
-            return res.data.data || [];
-        } catch (e) { return []; }
-    },
-    search: async (q, lang) => {
-        try {
-            const res = await client.get(`/search?q=${q}&lang=${lang}`);
-            return res.data.data || [];
-        } catch (e) { return []; }
-    },
-    getEpisodes: async (code, lang) => {
-        try {
-            const res = await client.get(`/episodes/${code}?lang=${lang}`);
-            return res.data.data || [];
-        } catch (e) { return []; }
-    },
-    getPlay: async (code, ep, lang) => {
-        try {
-            const res = await client.get(`/play/${code}?lang=${lang}&ep=${ep}`);
-            return res.data.data || null;
-        } catch (e) { return null; }
-    }
+const BASE_URL = 'https://d.sapimu.au/api';
+const CACHE = new Map();
+const DEFAULT_HEADERS = {
+  'User-Agent': 'PansaDrama/1.0',
+  'Content-Type': 'application/json'
 };
+
+const getTTL = (endpoint) => {
+  if (endpoint.includes('watch/player')) return 0;
+  if (endpoint.includes('detail') || endpoint.includes('chapters')) return 60 * 1000;
+  return 120 * 1000;
+};
+
+const cleanCache = () => {
+  const now = Date.now();
+  for (const [key, value] of CACHE.entries()) {
+    if (now > value.expiry) CACHE.delete(key);
+  }
+};
+setInterval(cleanCache, 60000);
+
+const apiClient = {
+  get: async (endpoint, params = {}) => {
+    const url = new URL(`${BASE_URL}${endpoint}`);
+    url.searchParams.append('lang', 'in');
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+    const cacheKey = url.toString();
+    const cached = CACHE.get(cacheKey);
+    if (cached && Date.now() < cached.expiry) {
+      return cached.data;
+    }
+
+    try {
+      const response = await fetch(url.toString(), { 
+        method: 'GET', 
+        headers: DEFAULT_HEADERS,
+        timeout: 10000 
+      });
+      
+      if (!response.ok) throw new Error(`Upstream Error: ${response.status}`);
+      
+      const data = await response.json();
+      
+      const ttl = getTTL(endpoint);
+      if (ttl > 0) {
+        CACHE.set(cacheKey, { data, expiry: Date.now() + ttl });
+      }
+      
+      return data;
+    } catch (error) {
+      console.error(`Fetch Error [GET] ${endpoint}:`, error.message);
+      return null;
+    }
+  },
+
+  post: async (endpoint, body = {}) => {
+    const url = `${BASE_URL}${endpoint}?lang=in`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify(body),
+        timeout: 10000
+      });
+
+      if (!response.ok) throw new Error(`Upstream Error: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`Fetch Error [POST] ${endpoint}:`, error.message);
+      return null;
+    }
+  }
+};
+
+module.exports = apiClient;
