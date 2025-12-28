@@ -1,7 +1,7 @@
 window.initDetail = function(bookId) {
   if(!bookId) return;
   
-  // 1. Get Detail
+  // 1. Get Detail via Proxy
   $.get(`/api/book/${bookId}/detail`, function(res) {
     if(res.code === 200) {
       const b = res.data;
@@ -13,12 +13,11 @@ window.initDetail = function(bookId) {
         <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">${b.summary}</p>
       `);
       
-      // Simpan metadata
       window.currentBookMeta = { id: b.id, title: b.book_name, cover: b.cover_url };
     }
   });
 
-  // 2. Get Chapters
+  // 2. Get Chapters via Proxy
   $.get(`/api/book/${bookId}/chapters`, function(res) {
     if(res.code === 200) {
       window.chapters = res.data.chapters || [];
@@ -48,10 +47,8 @@ window.loadPlayer = async function(bookId, chapterIndex) {
   const video = document.getElementById('main-video');
   const status = document.getElementById('player-status');
   
-  // Update Visual Chapter
   renderChapters(window.chapters, chapterIndex);
 
-  // Loading UI
   status.style.display = 'flex';
   status.innerHTML = '<div class="loader w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>';
 
@@ -72,7 +69,7 @@ window.loadPlayer = async function(bookId, chapterIndex) {
       const p = video.play();
       if (p !== undefined) {
         p.catch(() => {
-            status.innerHTML = '<button onclick="document.getElementById(\'main-video\').play(); this.parentElement.style.display=\'none\'" class="bg-white/20 hover:bg-white/30 p-4 rounded-full backdrop-blur-sm"><svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>';
+            status.innerHTML = '<button onclick="document.getElementById(\'main-video\').play(); this.parentElement.style.display=\'none\'" class="bg-white/20 hover:bg-white/30 p-4 rounded-full backdrop-blur-sm text-white">▶ Play</button>';
             status.style.display = 'flex';
         });
       }
@@ -88,14 +85,12 @@ window.loadPlayer = async function(bookId, chapterIndex) {
   }
 };
 
-// --- LOGIKA KONTROL VIDEO (Sama seperti sebelumnya) ---
 function setupControls(video, bookId, chapterIndex) {
   const btnPlay = $('#play-pause-btn');
   const seekFill = $('#seek-fill');
   const seekContainer = $('#seek-bar-container');
   const timeDisplay = $('#time-display');
   
-  // Watermark
   const wm = $('#watermark-overlay');
   wm.removeClass('hidden');
   if(window.wmInterval) clearInterval(window.wmInterval);
@@ -103,7 +98,6 @@ function setupControls(video, bookId, chapterIndex) {
     wm.css({ top: (Math.random()*80+10)+'%', left: (Math.random()*80+10)+'%' });
   }, 15000);
 
-  // Handlers
   btnPlay.off().on('click', togglePlay);
   $(video).off().on('click', (e) => { if(!e.target.closest('#video-controls')) togglePlay(); });
   
@@ -117,7 +111,6 @@ function setupControls(video, bookId, chapterIndex) {
     }
   }
 
-  // Resume & Progress
   const saved = getProgress(bookId);
   if(saved && saved.chapterIndex == chapterIndex && saved.time > 0 && saved.time < video.duration) {
     video.currentTime = saved.time;
@@ -141,13 +134,11 @@ function setupControls(video, bookId, chapterIndex) {
     document.fullscreenElement ? document.exitFullscreen() : c.requestFullscreen();
   });
   
-  // Auto Next
   $(video).on('ended', () => {
     if(chapterIndex + 1 < window.chapters.length) loadPlayer(bookId, chapterIndex + 1);
   });
 }
 
-// Helpers Storage
 function formatTime(s) {
   if(isNaN(s)) return "00:00";
   const m = Math.floor(s/60), sc = Math.floor(s%60);
