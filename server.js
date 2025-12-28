@@ -2,7 +2,8 @@ const express = require('express');
 const expressLayouts = require('express-ejs-layouts');
 const path = require('path');
 const compression = require('compression');
-const fetch = require('node-fetch'); // Wajib: npm install node-fetch@2
+const fetch = require('node-fetch'); 
+const https = require('https'); // TAMBAHAN: Untuk konfigurasi network
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,7 +19,6 @@ app.use(expressLayouts);
 app.set('layout', 'layouts/main');
 app.use(express.static(path.join(__dirname, 'src/public')));
 
-// Middleware Layout AJAX
 app.use((req, res, next) => {
   if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
     app.set('layout', false);
@@ -28,77 +28,82 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- PROXY HELPER ---
+// --- PROXY HELPER (FIX VPS HANG) ---
 const API_BASE = 'https://d.sapimu.au/api';
-// Header Penyamaran (PENTING)
+
+// 1. AGENT KHUSUS VPS: Paksa IPv4 & Ignore SSL
+const httpsAgent = new https.Agent({
+    family: 4, // PENTING: Paksa pakai IPv4 (Solusi anti-hang di VPS)
+    rejectUnauthorized: false,
+    keepAlive: true,
+    timeout: 10000
+});
+
 const PROXY_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Content-Type': 'application/json',
-    'Referer': 'https://d.sapimu.au/'
+    'Referer': 'https://d.sapimu.au/',
+    'Origin': 'https://d.sapimu.au'
 };
 
 async function fetchUpstream(endpoint) {
+    const url = API_BASE + endpoint;
+    console.log(`[REQ] -> ${url}`); // Log awal
+    
     try {
-        const url = API_BASE + endpoint;
-        console.log(`[PROXY] Fetching: ${url}`); // Cek terminal untuk debug
+        // Tambahkan 'agent: httpsAgent'
+        const response = await fetch(url, { 
+            headers: PROXY_HEADERS, 
+            agent: httpsAgent,
+            timeout: 10000 
+        });
         
-        const response = await fetch(url, { headers: PROXY_HEADERS, timeout: 15000 });
-        
+        console.log(`[RES] <- ${response.status} ${url}`); // Log balasan
+
         if (!response.ok) {
-            console.error(`[PROXY FAIL] ${response.status} on ${url}`);
-            // Tetap return JSON error agar frontend tidak hang
             return { code: response.status, data: null, msg: "Upstream Error" };
         }
         return await response.json();
     } catch (error) {
-        console.error(`[PROXY ERROR] ${error.message}`);
-        return { code: 500, message: 'Internal Server Error' };
+        console.error(`[ERR] ${error.message} on ${url}`); // Log error
+        // Return dummy data kosong agar tidak loading selamanya
+        return { code: 500, message: 'Connection Timeout', data: { list: [] } };
     }
 }
 
-// --- API ROUTES (SINKRON DENGAN FRONTEND) ---
+// --- API ROUTES ---
 
-// 1. FOR YOU
-// Frontend panggil: /api/foryou (tanpa page) atau /api/foryou/1
 app.get('/api/foryou/:page?', async (req, res) => {
-    // Default page 1 jika tidak ada params
     const page = req.params.page || req.query.page || 1;
     const data = await fetchUpstream(`/foryou/${page}?lang=in`);
     res.json(data);
 });
 
-// 2. NEW ARRIVALS
 app.get('/api/new/:page?', async (req, res) => {
     const page = req.params.page || req.query.page || 1;
     const data = await fetchUpstream(`/new/${page}?lang=in&pageSize=10`);
     res.json(data);
 });
 
-// 3. SEARCH
 app.get('/api/search/:q?/:page?', async (req, res) => {
     const q = req.params.q || req.query.q;
     const page = req.params.page || req.query.page || 1;
-    
-    if(!q) return res.json({ code: 400, message: "Butuh keyword" });
-
+    if(!q) return res.json({ code: 400 });
     const data = await fetchUpstream(`/search/${encodeURIComponent(q)}/${page}?lang=in`);
     res.json(data);
 });
 
-// 4. CATEGORIES
 app.get('/api/categories', async (req, res) => {
     const data = await fetchUpstream('/categories?lang=in');
     res.json(data);
 });
 
-// 5. CLASSIFY / GENRE
 app.get('/api/classify', async (req, res) => {
     const { genre, pageNo = 1 } = req.query;
     const data = await fetchUpstream(`/classify?lang=in&pageNo=${pageNo}&genre=${genre}&sort=1`);
     res.json(data);
 });
 
-// 6. DETAIL & CHAPTERS
 app.get('/api/book/:bookId/detail', async (req, res) => {
     const data = await fetchUpstream(`/chapters/detail/${req.params.bookId}?lang=in`);
     res.json(data);
@@ -109,22 +114,19 @@ app.get('/api/book/:bookId/chapters', async (req, res) => {
     res.json(data);
 });
 
-// 7. PLAYER (POST)
 app.post('/api/player', async (req, res) => {
     try {
         const { bookId, chapterIndex } = req.body;
         const response = await fetch(`${API_BASE}/watch/player?lang=in`, {
             method: 'POST',
             headers: PROXY_HEADERS,
-            body: JSON.stringify({ 
-                bookId, 
-                chapterIndex: parseInt(chapterIndex), 
-                lang: 'in' 
-            })
+            agent: httpsAgent, // Pakai agent juga di sini
+            body: JSON.stringify({ bookId, chapterIndex: parseInt(chapterIndex), lang: 'in' })
         });
         const data = await response.json();
         res.json(data);
     } catch (e) {
+        console.error('[PLAYER ERR]', e.message);
         res.status(500).json({ code: 500 });
     }
 });
@@ -138,5 +140,5 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Server JALAN di http://localhost:${PORT}`);
+    console.log(`Server RUNNING on http://localhost:${PORT}`);
 });
