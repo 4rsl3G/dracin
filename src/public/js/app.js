@@ -1,19 +1,24 @@
-// Init Home (For You & New)
+// Init Home
 window.initHome = function() {
-  console.log("Loading Home...");
+  console.log("Loading Home Data...");
 
-  // 1. Load For You
+  // 1. FOR YOU
   $.get('/api/foryou', function(res) {
-    if(res && res.code === 200 && res.data && res.data.list) {
+    console.log("ForYou Res:", res); // Cek console browser kalau error
+    
+    // LOGIKA BARU: Cek data lebih longgar
+    // Selama ada res.data.list, tampilkan saja
+    if(res && res.data && Array.isArray(res.data.list)) {
         renderGrid(res.data.list, '#foryou-container');
     } else {
-        $('#foryou-container').html('<div class="col-span-3 text-center text-xs text-gray-500 py-4">Gagal memuat rekomendasi.</div>');
+        $('#foryou-container').html('<div class="col-span-3 text-center text-xs text-gray-500 py-4">Data For You kosong.</div>');
     }
   }).fail(function() {
-      $('#foryou-container').html('<div class="col-span-3 text-center text-xs text-gray-500 py-4">Koneksi error.</div>');
+      // Error hanya jika koneksi ke server sendiri mati
+      $('#foryou-container').html('<div class="col-span-3 text-center text-xs text-gray-500 py-4">Gagal koneksi.</div>');
   });
 
-  // 2. Infinite Scroll New Arrivals
+  // 2. NEW ARRIVALS
   let page = 1;
   const observer = new IntersectionObserver((entries) => {
     if(entries[0].isIntersecting) {
@@ -28,11 +33,11 @@ window.initHome = function() {
 
 function loadNew(currentPage) {
   $.get(`/api/new/${currentPage}`, function(res) {
-    if(res && res.code === 200 && res.data && res.data.list) {
+    if(res && res.data && Array.isArray(res.data.list)) {
       if(res.data.list.length > 0) {
           renderGrid(res.data.list, '#new-container', true);
       } else {
-          $('#sentinel').hide(); // Hide loader if no more data
+          $('#sentinel').hide();
       }
     }
   });
@@ -41,12 +46,12 @@ function loadNew(currentPage) {
 // Categories
 window.initCategories = function() {
   $.get('/api/categories', function(res) {
-    if(res.code === 200 && res.data) {
+    // Cek res.data saja
+    if(res && Array.isArray(res.data)) {
       const html = res.data.map(c => 
         `<button class="flex-shrink-0 px-4 py-1.5 border border-gray-200 dark:border-gray-800 rounded-full text-xs font-medium hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors" onclick="loadGenre(${c.id}, this)">${c.name}</button>`
       ).join('');
       $('#categories-list').html(html);
-      
       if(res.data.length > 0) loadGenre(res.data[0].id);
     }
   });
@@ -61,7 +66,7 @@ window.loadGenre = function(id, btn) {
   $('#category-results').html('<div class="col-span-full text-center py-10"><div class="inline-block w-6 h-6 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div></div>');
   
   $.get(`/api/classify?genre=${id}`, function(res) {
-    if(res.code === 200 && res.data && res.data.list) {
+    if(res && res.data && Array.isArray(res.data.list)) {
         renderGrid(res.data.list, '#category-results');
     } else {
         $('#category-results').html('<div class="col-span-full text-center py-10 text-gray-500">Kosong.</div>');
@@ -79,7 +84,7 @@ window.initSearch = function() {
     
     timer = setTimeout(() => {
       $.get(`/api/search/${encodeURIComponent(q)}/1`, function(res) {
-        if(res.code === 200 && res.data && res.data.list) {
+        if(res && res.data && Array.isArray(res.data.list)) {
             renderGrid(res.data.list, '#search-results');
         } else {
             $('#search-results').html('<div class="col-span-full text-center py-4 text-gray-500">Tidak ditemukan.</div>');
@@ -89,7 +94,7 @@ window.initSearch = function() {
   });
 };
 
-// History
+// History (Tidak berubah, karena pakai localStorage)
 window.initHistory = function() {
   const hist = JSON.parse(localStorage.getItem('pansa_history') || '[]');
   if(hist.length > 0) {
