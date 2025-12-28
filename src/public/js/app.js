@@ -1,57 +1,75 @@
-// Init Home
+// Init Home (For You & New)
 window.initHome = function() {
-  console.log("Memuat Home via Local Proxy...");
-  
-  // Panggil route local server.js
-  $.get('/api/foryou', function(data) {
-    if(data && data.code === 200) {
-        renderGrid(data.data.list, '#foryou-container');
+  console.log("Loading Home...");
+
+  // 1. Load For You
+  $.get('/api/foryou', function(res) {
+    if(res && res.code === 200 && res.data && res.data.list) {
+        renderGrid(res.data.list, '#foryou-container');
     } else {
-        $('#foryou-container').html('<div class="text-center p-4 text-gray-500">Gagal memuat data dari server.</div>');
+        $('#foryou-container').html('<div class="col-span-3 text-center text-xs text-gray-500 py-4">Gagal memuat rekomendasi.</div>');
     }
   }).fail(function() {
-      $('#foryou-container').html('<div class="text-center p-4 text-red-500">Koneksi Server Error.</div>');
+      $('#foryou-container').html('<div class="col-span-3 text-center text-xs text-gray-500 py-4">Koneksi error.</div>');
   });
 
+  // 2. Infinite Scroll New Arrivals
   let page = 1;
   const observer = new IntersectionObserver((entries) => {
-    if(entries[0].isIntersecting) loadNew(page++);
+    if(entries[0].isIntersecting) {
+        loadNew(page);
+        page++;
+    }
   });
   
   const sentinel = document.getElementById('sentinel');
   if(sentinel) observer.observe(sentinel);
 };
 
-function loadNew(page) {
-  $.get(`/api/new?page=${page}`, function(data) {
-    if(data.code === 200 && data.data.list) {
-      renderGrid(data.data.list, '#new-container', true);
+function loadNew(currentPage) {
+  $.get(`/api/new/${currentPage}`, function(res) {
+    if(res && res.code === 200 && res.data && res.data.list) {
+      if(res.data.list.length > 0) {
+          renderGrid(res.data.list, '#new-container', true);
+      } else {
+          $('#sentinel').hide(); // Hide loader if no more data
+      }
     }
   });
 }
 
-// Init Categories
+// Categories
 window.initCategories = function() {
-  $.get('/api/categories', function(data) {
-    if(data.code === 200) {
-      const html = data.data.map(c => 
-        `<button class="px-4 py-1 border border-gray-300 dark:border-gray-700 rounded-full text-sm hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors flex-shrink-0" onclick="loadGenre(${c.id})">${c.name}</button>`
+  $.get('/api/categories', function(res) {
+    if(res.code === 200 && res.data) {
+      const html = res.data.map(c => 
+        `<button class="flex-shrink-0 px-4 py-1.5 border border-gray-200 dark:border-gray-800 rounded-full text-xs font-medium hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors" onclick="loadGenre(${c.id}, this)">${c.name}</button>`
       ).join('');
       $('#categories-list').html(html);
-      if(data.data.length > 0) loadGenre(data.data[0].id);
+      
+      if(res.data.length > 0) loadGenre(res.data[0].id);
     }
   });
 };
 
-window.loadGenre = function(id) {
-  $('#category-results').html('<div class="col-span-3 text-center py-8 text-gray-500">Loading genre...</div>');
-  $.get(`/api/classify?genre=${id}`, function(data) {
-    if(data.code === 200) renderGrid(data.data.list, '#category-results');
-    else $('#category-results').html('<div class="col-span-3 text-center">Empty</div>');
+window.loadGenre = function(id, btn) {
+  if(btn) {
+      $('#categories-list button').removeClass('bg-black text-white dark:bg-white dark:text-black').addClass('border-gray-200 dark:border-gray-800');
+      $(btn).removeClass('border-gray-200 dark:border-gray-800').addClass('bg-black text-white dark:bg-white dark:text-black');
+  }
+
+  $('#category-results').html('<div class="col-span-full text-center py-10"><div class="inline-block w-6 h-6 border-2 border-gray-300 border-t-black rounded-full animate-spin"></div></div>');
+  
+  $.get(`/api/classify?genre=${id}`, function(res) {
+    if(res.code === 200 && res.data && res.data.list) {
+        renderGrid(res.data.list, '#category-results');
+    } else {
+        $('#category-results').html('<div class="col-span-full text-center py-10 text-gray-500">Kosong.</div>');
+    }
   });
 };
 
-// Init Search
+// Search
 window.initSearch = function() {
   let timer;
   $('#search-input').on('input', function() {
@@ -60,46 +78,50 @@ window.initSearch = function() {
     if(q.length < 2) return;
     
     timer = setTimeout(() => {
-      $.get(`/api/search?q=${q}`, function(data) {
-        if(data.code === 200) renderGrid(data.data.list, '#search-results');
+      $.get(`/api/search/${encodeURIComponent(q)}/1`, function(res) {
+        if(res.code === 200 && res.data && res.data.list) {
+            renderGrid(res.data.list, '#search-results');
+        } else {
+            $('#search-results').html('<div class="col-span-full text-center py-4 text-gray-500">Tidak ditemukan.</div>');
+        }
       });
-    }, 500);
+    }, 600);
   });
 };
 
-// Init History
+// History
 window.initHistory = function() {
   const hist = JSON.parse(localStorage.getItem('pansa_history') || '[]');
   if(hist.length > 0) {
     const html = hist.map(h => `
-      <a href="/watch/${h.bookId}" class="nav-link flex gap-4 p-3 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors">
-        <div class="w-20 h-28 bg-gray-300 bg-cover rounded flex-shrink-0" style="background-image:url(${h.cover})"></div>
-        <div class="flex flex-col py-1 justify-center">
-           <h3 class="font-bold text-gray-900 dark:text-gray-100 line-clamp-2 text-sm">${h.title}</h3>
-           <p class="text-xs text-gray-500 mt-1">Episode ${h.chapterIndex + 1}</p>
-           <div class="mt-2">
-             <span class="text-[10px] px-2 py-1 bg-black text-white dark:bg-white dark:text-black rounded">Lanjutkan</span>
-           </div>
+      <a href="/watch/${h.bookId}" class="nav-link flex gap-3 p-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all">
+        <div class="w-16 h-20 bg-gray-200 rounded-lg bg-cover bg-center flex-shrink-0" style="background-image:url(${h.cover})"></div>
+        <div class="flex flex-col justify-center min-w-0">
+           <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">${h.title}</h3>
+           <p class="text-xs text-gray-500 mt-1">Lanjut Episode ${h.chapterIndex + 1}</p>
         </div>
       </a>
     `).join('');
     $('#history-list').html(html);
   } else {
-    $('#history-list').html('<p class="text-center text-gray-500 py-10">Belum ada riwayat tontonan.</p>');
+    $('#history-list').html('<div class="text-center py-10 text-gray-400 text-sm">Belum ada riwayat.</div>');
   }
 };
 
-// Helper Render (Grid Poster)
+// Render Helper
 function renderGrid(list, selector, append = false) {
-  if(!list || list.length === 0) return;
+  if(!list || list.length === 0) {
+      if(!append) $(selector).html(''); 
+      return;
+  }
   
   const html = list.map(item => `
-    <a href="/watch/${item.id}" class="nav-link group relative block">
-      <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden relative shadow-sm border border-transparent hover:border-gray-500 transition-colors">
-        <img src="${item.cover_url}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
-        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        <div class="absolute bottom-0 w-full p-2 bg-gradient-to-t from-black/80 to-transparent">
-          <p class="text-white text-xs font-medium truncate drop-shadow-md">${item.book_name}</p>
+    <a href="/watch/${item.id}" class="nav-link group relative block overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+      <div class="aspect-[2/3] w-full relative">
+        <img src="${item.cover_url}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" alt="${item.book_name}">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+        <div class="absolute bottom-0 left-0 w-full p-3">
+          <p class="text-white text-xs font-semibold leading-tight line-clamp-2 drop-shadow-md">${item.book_name}</p>
         </div>
       </div>
     </a>
