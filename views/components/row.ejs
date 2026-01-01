@@ -1,0 +1,24 @@
+<%
+  const row = locals.row || {};
+  const title = row.contentName || '';
+  const infos = Array.isArray(row.contentInfos) ? row.contentInfos : [];
+  const rid = String(row.groupId || Math.random()).replace(/\W+/g,'');
+%>
+
+<section class="ps-row" aria-label="<%= title %>">
+  <div class="ps-row-head">
+    <h2 class="ps-row-title"><%= title %></h2>
+    <div class="ps-row-controls">
+      <button class="ps-row-btn" data-row="<%= rid %>" data-dir="-1" aria-label="Scroll left">‹</button>
+      <button class="ps-row-btn" data-row="<%= rid %>" data-dir="1" aria-label="Scroll right">›</button>
+    </div>
+  </div>
+
+  <div class="ps-row-rail" id="row_<%= rid %>">
+    <% infos.forEach((item) => { %>
+      <div class="ps-row-item">
+        <%- include('./card.ejs', { item }) %>
+      </div>
+    <% }) %>
+  </div>
+</section>
