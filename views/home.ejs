@@ -6,14 +6,23 @@
 <section class="ps-hero">
   <div class="ps-hero-bg"></div>
   <div class="ps-hero-inner">
-    <div class="ps-hero-kicker">Streaming sinematik</div>
+    <div class="ps-hero-kicker">
+      <i class="fa-solid fa-film"></i>
+      <span>Streaming sinematik</span>
+    </div>
     <h1 class="ps-hero-title">PANSTREAM</h1>
     <p class="ps-hero-sub">
-      UI/UX premium, kontrol player kustom, dan browsing mulus.
+      UI/UX premium, player kustom, browsing mulus, dan search realtime.
     </p>
     <div class="ps-hero-actions">
-      <a class="ps-btn ps-btn-accent" href="/browse">Mulai Browse</a>
-      <button class="ps-btn ps-btn-ghost" id="psOpenSearch2">Cari Serial</button>
+      <a class="ps-btn ps-btn-accent" href="/browse">
+        <i class="fa-solid fa-compass"></i>
+        <span>Mulai Browse</span>
+      </a>
+      <button class="ps-btn ps-btn-ghost" id="psOpenSearch2">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Cari Serial</span>
+      </button>
     </div>
   </div>
 </section>
@@ -36,7 +45,6 @@
 </div>
 
 <script>
-  // bind second CTA to open search overlay
   (function(){
     const btn = document.getElementById('psOpenSearch2');
     if (btn) btn.addEventListener('click', () => {
