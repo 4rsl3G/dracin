@@ -1,0 +1,59 @@
+<%
+  const d = data?.detail || {};
+  const id = String(d.shortPlayId || '');
+  const name = d.shortPlayName || '';
+  const cover = d.shortPlayCover || '';
+  const intro = d.shotIntroduce || '';
+  const total = d.totalEpisode || 0;
+  const isFinish = d.isFinish === 1;
+  const eps = Array.isArray(d.shortPlayEpisodeInfos) ? d.shortPlayEpisodeInfos : [];
+%>
+
+<section class="ps-detail-hero" data-cover="<%= cover %>">
+  <div class="ps-detail-scrim"></div>
+  <div class="ps-detail-inner">
+    <div class="ps-detail-meta">
+      <div class="ps-detail-pill"><%= isFinish ? 'Tamat' : 'On-going' %></div>
+      <div class="ps-detail-pill"><%= total %> Episode</div>
+    </div>
+    <h1 class="ps-detail-title"><%= name %></h1>
+    <% if (intro) { %><p class="ps-detail-intro"><%= intro %></p><% } %>
+
+    <% if (eps.length) { 
+      const first = eps[0];
+    %>
+      <div class="ps-detail-actions">
+        <a class="ps-btn ps-btn-accent" href="/watch/<%= id %>/<%= first.episodeId %>">
+          ▶ Play Episode 1
+        </a>
+        <button class="ps-btn ps-btn-ghost" id="psCopyLink">Bagikan</button>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="ps-episodes">
+  <div class="ps-episodes-head">
+    <h2 class="ps-episodes-title">Episode</h2>
+    <div class="ps-episodes-sub">Virtual scroll aktif untuk performa VPS</div>
+  </div>
+
+  <div class="ps-episode-rail" id="psEpisodeRail">
+    <div class="ps-episode-spacer" id="psEpisodeTopSpacer"></div>
+    <div class="ps-episode-window" id="psEpisodeWindow"></div>
+    <div class="ps-episode-spacer" id="psEpisodeBottomSpacer"></div>
+  </div>
+
+  <script>
+    window.__PANSTREAM__ = window.__PANSTREAM__ || {};
+    window.__PANSTREAM__.detail = <%- JSON.stringify({
+      shortPlayId: d.shortPlayId,
+      shortPlayName: d.shortPlayName,
+      shortPlayCover: d.shortPlayCover,
+      shotIntroduce: d.shotIntroduce,
+      totalEpisode: d.totalEpisode,
+      isFinish: d.isFinish,
+      shortPlayEpisodeInfos: eps
+    }) %>;
+  </script>
+</section>
