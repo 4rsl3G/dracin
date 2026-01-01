@@ -1,10 +1,9 @@
 'use strict';
 
 (function () {
-  const $ = (q, el = document) => el.querySelector(q);
-  const $$ = (q, el = document) => Array.from(el.querySelectorAll(q));
+  const route = (window.__PANSTREAM__ && window.__PANSTREAM__.route) || '';
 
-  // ---------- Global Store (WAJIB) ----------
+  // ===== Store (global state required) =====
   const store = (function createStore() {
     let state = {
       loading: false,
@@ -23,34 +22,31 @@
       subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); }
     };
   })();
-
   window.PSStore = store;
 
-  // ---------- Toast ----------
-  const toastEl = $('#psToast');
+  // ===== Toast =====
+  const $toast = $('#psToast');
   let toastT = null;
   function toast(msg, kind = 'info') {
-    if (!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.className = `ps-toast is-show is-${kind}`;
+    if (!$toast.length) return;
+    $toast.text(msg);
+    $toast.attr('class', `ps-toast is-show is-${kind}`);
     clearTimeout(toastT);
     toastT = setTimeout(() => {
-      toastEl.className = 'ps-toast';
-      toastEl.textContent = '';
+      $toast.attr('class', 'ps-toast').text('');
     }, 2400);
   }
 
-  // ---------- Navbar scroll ----------
-  const nav = $('#psNav');
+  // ===== Navbar solid on scroll =====
+  const $nav = $('#psNav');
   function onScrollNav() {
-    if (!nav) return;
-    const y = window.scrollY || 0;
-    nav.classList.toggle('is-solid', y > 24);
+    if (!$nav.length) return;
+    $nav.toggleClass('is-solid', (window.scrollY || 0) > 24);
   }
   window.addEventListener('scroll', onScrollNav, { passive: true });
   onScrollNav();
 
-  // ---------- Card cover fallback & lazy-ish ----------
+  // ===== Fallback cover (real inline SVG data URI) =====
   const fallback = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200">
       <defs>
@@ -67,33 +63,25 @@
   `)}`;
 
   function applyCovers() {
-    $$('.ps-card-poster, .ps-detail-hero').forEach(el => {
-      const url = el.getAttribute('data-cover');
-      if (url && url !== 'null') {
-        el.style.backgroundImage = `url("${url}")`;
-      } else {
-        el.style.backgroundImage = `url("${fallback}")`;
-      }
+    $('.ps-card-poster, .ps-detail-hero').each(function () {
+      const url = $(this).attr('data-cover');
+      if (url && url !== 'null') $(this).css('background-image', `url("${url}")`);
+      else $(this).css('background-image', `url("${fallback}")`);
     });
   }
   applyCovers();
 
-  // ---------- Home: horizontal row controls ----------
-  function bindRowScrollButtons() {
-    $$('.ps-row-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const rid = btn.getAttribute('data-row');
-        const dir = Number(btn.getAttribute('data-dir') || 1);
-        const rail = document.getElementById(`row_${rid}`);
-        if (!rail) return;
-        const amount = Math.max(rail.clientWidth * 0.9, 320);
-        rail.scrollBy({ left: amount * dir, behavior: 'smooth' });
-      });
-    });
-  }
-  bindRowScrollButtons();
+  // ===== Row scroll buttons =====
+  $('.ps-row-btn').on('click', function () {
+    const rid = $(this).attr('data-row');
+    const dir = Number($(this).attr('data-dir') || 1);
+    const rail = document.getElementById(`row_${rid}`);
+    if (!rail) return;
+    const amount = Math.max(rail.clientWidth * 0.9, 320);
+    rail.scrollBy({ left: amount * dir, behavior: 'smooth' });
+  });
 
-  // ---------- Debounce ----------
+  // ===== Debounce =====
   function debounce(fn, ms) {
     let t = null;
     return function (...args) {
@@ -102,80 +90,44 @@
     };
   }
 
-  // ---------- Fetch helper with 429 handling ----------
-  async function psFetchJson(url, opts = {}) {
-    const res = await fetch(url, {
+  // ===== jQuery AJAX helper with 429 handling =====
+  function ajaxJson(url, opts = {}) {
+    return $.ajax({
+      url,
       method: 'GET',
-      headers: { 'Accept': 'application/json' },
+      dataType: 'json',
+      timeout: 12000,
       ...opts
+    }).fail(function (xhr) {
+      if (xhr && xhr.status === 429) {
+        toast('Terlalu banyak request. Tenang…', 'warn');
+      }
     });
-
-    if (res.status === 429) {
-      toast('Terlalu banyak request. Tenang…', 'warn');
-      const err = new Error('Rate limited');
-      err.status = 429;
-      throw err;
-    }
-    if (!res.ok) {
-      const err = new Error('Request failed');
-      err.status = res.status;
-      throw err;
-    }
-    return res.json();
   }
 
-  // ---------- Realtime Search (400ms) ----------
-  const overlay = $('#psSearchOverlay');
-  const openSearch = $('#psOpenSearch');
-  const closeScrim = $('#psCloseSearch');
-  const closeBtn = $('#psCloseSearchBtn');
-  const input = $('#psSearchInput');
-  const resultsEl = $('#psSearchResults');
-  const emptyEl = $('#psSearchEmpty');
+  // ===== Search overlay =====
+  const $overlay = $('#psSearchOverlay');
+  const $openSearch = $('#psOpenSearch');
+  const $closeScrim = $('#psCloseSearch');
+  const $closeBtn = $('#psCloseSearchBtn');
+  const $input = $('#psSearchInput');
+  const $resultsEl = $('#psSearchResults');
+  const $emptyEl = $('#psSearchEmpty');
 
   function setOverlay(open) {
-    if (!overlay) return;
-    overlay.classList.toggle('is-open', open);
-    overlay.setAttribute('aria-hidden', open ? 'false' : 'true');
-    document.body.classList.toggle('ps-no-scroll', open);
-    if (open) setTimeout(() => input && input.focus(), 50);
+    if (!$overlay.length) return;
+    $overlay.toggleClass('is-open', open);
+    $overlay.attr('aria-hidden', open ? 'false' : 'true');
+    $('body').toggleClass('ps-no-scroll', open);
+    if (open) setTimeout(() => $input.trigger('focus'), 60);
   }
 
-  if (openSearch) openSearch.addEventListener('click', () => setOverlay(true));
-  if (closeScrim) closeScrim.addEventListener('click', () => setOverlay(false));
-  if (closeBtn) closeBtn.addEventListener('click', () => setOverlay(false));
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) setOverlay(false);
+  $openSearch.on('click', () => setOverlay(true));
+  $closeScrim.on('click', () => setOverlay(false));
+  $closeBtn.on('click', () => setOverlay(false));
+  $(window).on('keydown', (e) => {
+    if (e.key === 'Escape' && $overlay.hasClass('is-open')) setOverlay(false);
   });
-
-  function renderSearch(list) {
-    if (!resultsEl || !emptyEl) return;
-    resultsEl.innerHTML = '';
-    emptyEl.hidden = !(Array.isArray(list) && list.length === 0);
-
-    (list || []).forEach(item => {
-      const id = String(item.shortPlayId || '');
-      const cover = item.shortPlayCover && item.shortPlayCover !== 'null' ? item.shortPlayCover : fallback;
-      const titleHtml = item.shortPlayName || '';
-      const intro = item.shotIntroduce || '';
-      const heat = item.formatHeatScore || '';
-
-      const card = document.createElement('a');
-      card.className = 'ps-search-item';
-      card.href = `/detail/${id}`;
-      card.innerHTML = `
-        <div class="ps-search-poster" style="background-image:url('${cover}')"></div>
-        <div class="ps-search-info">
-          <div class="ps-search-name">${titleHtml}</div>
-          <div class="ps-search-intro">${escapeHtml(intro)}</div>
-          <div class="ps-search-meta">${heat ? `<span class="ps-badge">${escapeHtml(heat)}</span>` : ''}</div>
-        </div>
-      `;
-      resultsEl.appendChild(card);
-    });
-
-    // highlight <em> already in API response (allowed), ensure overlay style stays.
-  }
 
   function escapeHtml(s) {
     return String(s || '')
@@ -186,39 +138,72 @@
       .replaceAll("'", '&#039;');
   }
 
-  const doSearch = debounce(async () => {
-    const q = String(input?.value || '').trim();
+  function renderSearch(list) {
+    $resultsEl.empty();
+    const empty = Array.isArray(list) && list.length === 0;
+    $emptyEl.prop('hidden', !empty);
+
+    (list || []).forEach(item => {
+      const id = String(item.shortPlayId || '');
+      const cover = item.shortPlayCover && item.shortPlayCover !== 'null' ? item.shortPlayCover : fallback;
+      const titleHtml = item.shortPlayName || ''; // contains <em> from API
+      const intro = item.shotIntroduce || '';
+      const heat = item.formatHeatScore || '';
+
+      const $card = $(`
+        <a class="ps-search-item" href="/detail/${encodeURIComponent(id)}">
+          <div class="ps-search-poster"></div>
+          <div class="ps-search-info">
+            <div class="ps-search-name">${titleHtml}</div>
+            <div class="ps-search-intro">${escapeHtml(intro)}</div>
+            <div class="ps-search-meta">${heat ? `<span class="ps-badge">${escapeHtml(heat)}</span>` : ''}</div>
+          </div>
+        </a>
+      `);
+      $card.find('.ps-search-poster').css('background-image', `url('${cover}')`);
+      $resultsEl.append($card);
+    });
+  }
+
+  const doSearch = debounce(() => {
+    const q = String($input.val() || '').trim();
+
     if (!q) {
-      store.setState({ searchResult: [] });
-      if (resultsEl) resultsEl.innerHTML = '';
-      if (emptyEl) emptyEl.hidden = true;
+      store.setState({ searchResult: [], loading: false, error: null });
+      $resultsEl.empty();
+      $emptyEl.prop('hidden', true);
       return;
     }
 
     store.setState({ loading: true, error: null });
 
-    try {
-      const data = await psFetchJson(`/api/search?query=${encodeURIComponent(q)}`);
-      const list = Array.isArray(data?.searchCodeSearchResult) ? data.searchCodeSearchResult : [];
-      store.setState({ loading: false, searchResult: list });
-      renderSearch(list);
-    } catch (e) {
-      store.setState({ loading: false, error: 'Search gagal.' });
-      toast(e?.status === 429 ? 'Search kena rate limit.' : 'Search gagal.', 'error');
-      renderSearch([]);
-    }
+    ajaxJson(`/api/search?query=${encodeURIComponent(q)}`)
+      .done((data) => {
+        const list = Array.isArray(data?.searchCodeSearchResult) ? data.searchCodeSearchResult : [];
+        store.setState({ loading: false, searchResult: list });
+        renderSearch(list);
+      })
+      .fail((xhr) => {
+        store.setState({ loading: false, error: 'Search gagal.', searchResult: [] });
+        toast(xhr && xhr.status === 429 ? 'Search kena rate limit.' : 'Search gagal.', 'error');
+        renderSearch([]);
+      });
   }, 400);
 
-  if (input) input.addEventListener('input', doSearch);
+  $input.on('input', doSearch);
 
-  // ---------- Browse: Infinite Scroll + Skeleton shimmer + retry 1x on error ----------
-  const grid = $('#psBrowseGrid');
-  const inf = $('#psInfinite');
-  const route = (window.__PANSTREAM__ && window.__PANSTREAM__.route) || '';
+  // ===== Browse infinite (AJAX + retry 1x) =====
+  const $grid = $('#psBrowseGrid');
+  const $inf = $('#psInfinite');
 
   let page = 1;
   let isLoading = false;
   let exhausted = false;
+
+  function showSkeleton(show) {
+    if (!$inf.length) return;
+    $inf.css('display', show ? 'block' : 'none');
+  }
 
   function cardHTML(item) {
     const id = String(item.shortPlayId || '');
@@ -228,9 +213,10 @@
     const scriptName = item.scriptName || '';
     const heat = item.heatScoreShow || '';
 
-    const tags = labels.slice(0,3).map(t => `<span class="ps-tag">${escapeHtml(t)}</span>`).join('');
+    const tags = labels.slice(0, 3).map(t => `<span class="ps-tag">${escapeHtml(t)}</span>`).join('');
+
     return `
-      <a class="ps-card" href="/detail/${id}" data-id="${id}">
+      <a class="ps-card" href="/detail/${encodeURIComponent(id)}" data-id="${escapeHtml(id)}">
         <div class="ps-card-poster" style="background-image:url('${cover}')">
           <div class="ps-card-gradient"></div>
           <div class="ps-card-badges">
@@ -240,21 +226,26 @@
           <div class="ps-card-overlay">
             <div class="ps-card-title">${escapeHtml(name)}</div>
             ${tags ? `<div class="ps-card-tags">${tags}</div>` : ''}
-            <div class="ps-card-cta"><span class="ps-playdot">▶</span><span>Detail</span></div>
+            <div class="ps-card-cta">
+              <span class="ps-playdot"><i class="fa-solid fa-play"></i></span>
+              <span>Detail</span>
+            </div>
           </div>
         </div>
       </a>
     `;
   }
 
-  function showSkeleton(show) {
-    if (!inf) return;
-    inf.style.display = show ? 'block' : 'none';
+  function nearBottom() {
+    const y = window.scrollY || 0;
+    const h = window.innerHeight || 0;
+    const full = document.documentElement.scrollHeight || 0;
+    return y + h > full - 900;
   }
 
-  async function loadNextPage() {
+  function loadNextPage() {
     if (route !== 'browse') return;
-    if (!grid || !inf) return;
+    if (!$grid.length || !$inf.length) return;
     if (isLoading || exhausted) return;
 
     isLoading = true;
@@ -263,88 +254,70 @@
 
     const targetPage = page + 1;
 
-    async function attempt() {
-      const data = await psFetchJson(`/api/foryou?page=${targetPage}`);
-      const list = Array.isArray(data?.contentInfos) ? data.contentInfos : [];
-      return list;
+    function attempt() {
+      return ajaxJson(`/api/foryou?page=${targetPage}`);
     }
 
-    try {
-      let list;
-      try {
-        list = await attempt();
-      } catch (e1) {
-        // retry 1x
-        list = await attempt();
-      }
+    attempt()
+      .fail(() => attempt()) // retry 1x
+      .done((data) => {
+        const list = Array.isArray(data?.contentInfos) ? data.contentInfos : [];
+        if (!list.length) {
+          exhausted = true;
+          showSkeleton(false);
+          isLoading = false;
+          store.setState({ loading: false });
+          return;
+        }
 
-      if (!list.length) {
-        exhausted = true; // Pagination habis → stop infinite scroll
-        showSkeleton(false);
+        page = targetPage;
+        const frag = document.createDocumentFragment();
+        list.forEach(item => {
+          const wrap = document.createElement('div');
+          wrap.innerHTML = cardHTML(item);
+          frag.appendChild(wrap.firstElementChild);
+        });
+        $grid[0].appendChild(frag);
+
         isLoading = false;
+        showSkeleton(false);
         store.setState({ loading: false });
-        return;
-      }
-
-      page = targetPage;
-      const frag = document.createDocumentFragment();
-      list.forEach(item => {
-        const wrap = document.createElement('div');
-        wrap.innerHTML = cardHTML(item);
-        frag.appendChild(wrap.firstElementChild);
+      })
+      .fail((xhr) => {
+        isLoading = false;
+        showSkeleton(false);
+        store.setState({ loading: false, error: 'Gagal memuat halaman berikutnya.' });
+        toast(xhr && xhr.status === 429 ? 'Rate limit. Coba lagi.' : 'Gagal memuat. Coba lagi.', 'error');
       });
-      grid.appendChild(frag);
-
-      isLoading = false;
-      showSkeleton(false);
-      store.setState({ loading: false });
-
-    } catch (e) {
-      isLoading = false;
-      showSkeleton(false);
-      store.setState({ loading: false, error: 'Gagal memuat halaman berikutnya.' });
-      toast(e?.status === 429 ? 'Rate limit. Coba lagi.' : 'Gagal memuat. Coba lagi.', 'error');
-    }
-  }
-
-  function nearBottom() {
-    const y = window.scrollY || 0;
-    const h = window.innerHeight || 0;
-    const doc = document.documentElement;
-    const full = doc.scrollHeight || 0;
-    return y + h > full - 900;
   }
 
   if (route === 'browse') {
     showSkeleton(false);
-    window.addEventListener('scroll', debounce(() => {
+    $(window).on('scroll', debounce(() => {
       if (nearBottom()) loadNextPage();
-    }, 120), { passive: true });
+    }, 120));
   }
 
-  // ---------- Detail: Virtual Scroll episodes ----------
+  // ===== Detail: virtual scroll episodes + copy link =====
   if (route === 'detail') {
-    const rail = $('#psEpisodeRail');
-    const winEl = $('#psEpisodeWindow');
-    const topSp = $('#psEpisodeTopSpacer');
-    const botSp = $('#psEpisodeBottomSpacer');
-    const detail = window.__PANSTREAM__ && window.__PANSTREAM__.detail;
+    $('#psCopyLink').on('click', async () => {
+      try {
+        await navigator.clipboard.writeText(location.href);
+        toast('Link disalin', 'info');
+      } catch {
+        toast('Gagal menyalin', 'error');
+      }
+    });
 
-    const copyBtn = $('#psCopyLink');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(location.href);
-          toast('Link disalin', 'info');
-        } catch {
-          toast('Gagal menyalin', 'error');
-        }
-      });
-    }
+    const rail = document.getElementById('psEpisodeRail');
+    const winEl = document.getElementById('psEpisodeWindow');
+    const topSp = document.getElementById('psEpisodeTopSpacer');
+    const botSp = document.getElementById('psEpisodeBottomSpacer');
+    const detail = window.__PANSTREAM__ && window.__PANSTREAM__.detail;
 
     if (rail && winEl && topSp && botSp && detail && Array.isArray(detail.shortPlayEpisodeInfos)) {
       const list = detail.shortPlayEpisodeInfos;
-      const rowH = 76; // fixed row height for virtualization
+      const rowH = 76;
       const overscan = 8;
 
       rail.style.setProperty('--ps-ep-row-h', `${rowH}px`);
@@ -355,11 +328,8 @@
         const start = Math.max(0, Math.floor(scrollTop / rowH) - overscan);
         const end = Math.min(list.length, Math.ceil((scrollTop + viewH) / rowH) + overscan);
 
-        const topPad = start * rowH;
-        const botPad = (list.length - end) * rowH;
-
-        topSp.style.height = `${topPad}px`;
-        botSp.style.height = `${botPad}px`;
+        topSp.style.height = `${start * rowH}px`;
+        botSp.style.height = `${(list.length - end) * rowH}px`;
 
         const slice = list.slice(start, end);
 
@@ -377,7 +347,7 @@
                 <div class="ps-ep-title">Episode ${ep.episodeNo}${ep.playClarity ? ` • ${escapeHtml(ep.playClarity)}` : ''}</div>
                 <div class="ps-ep-meta">${tags || '<span class="ps-ep-dim">Siap diputar</span>'}</div>
               </div>
-              <div class="ps-ep-go">▶</div>
+              <div class="ps-ep-go"><i class="fa-solid fa-play"></i></div>
             </a>
           `;
         }).join('');
