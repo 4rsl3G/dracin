@@ -1,0 +1,47 @@
+<%
+  const theaters = Array.isArray(data?.theaters) ? data.theaters : [];
+  const error = data?.error;
+%>
+
+<section class="ps-hero">
+  <div class="ps-hero-bg"></div>
+  <div class="ps-hero-inner">
+    <div class="ps-hero-kicker">Streaming sinematik</div>
+    <h1 class="ps-hero-title">PANSTREAM</h1>
+    <p class="ps-hero-sub">
+      UI/UX premium, kontrol player kustom, dan browsing mulus.
+    </p>
+    <div class="ps-hero-actions">
+      <a class="ps-btn ps-btn-accent" href="/browse">Mulai Browse</a>
+      <button class="ps-btn ps-btn-ghost" id="psOpenSearch2">Cari Serial</button>
+    </div>
+  </div>
+</section>
+
+<% if (error) { %>
+  <div class="ps-alert"><%= error %></div>
+<% } %>
+
+<div class="ps-content">
+  <% theaters.forEach((row) => { %>
+    <%- include('./components/row.ejs', { row }) %>
+  <% }) %>
+
+  <% if (!theaters.length) { %>
+    <div class="ps-empty-block">
+      <div class="ps-empty-title">Tidak ada konten untuk ditampilkan.</div>
+      <div class="ps-empty-sub">Coba lagi beberapa saat.</div>
+    </div>
+  <% } %>
+</div>
+
+<script>
+  // bind second CTA to open search overlay
+  (function(){
+    const btn = document.getElementById('psOpenSearch2');
+    if (btn) btn.addEventListener('click', () => {
+      const open = document.getElementById('psOpenSearch');
+      if (open) open.click();
+    });
+  })();
+</script>
