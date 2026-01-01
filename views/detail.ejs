@@ -19,14 +19,14 @@
     <h1 class="ps-detail-title"><%= name %></h1>
     <% if (intro) { %><p class="ps-detail-intro"><%= intro %></p><% } %>
 
-    <% if (eps.length) { 
-      const first = eps[0];
-    %>
+    <% if (eps.length) { const first = eps[0]; %>
       <div class="ps-detail-actions">
         <a class="ps-btn ps-btn-accent" href="/watch/<%= id %>/<%= first.episodeId %>">
-          ▶ Play Episode 1
+          <i class="fa-solid fa-play"></i><span>Play Episode 1</span>
         </a>
-        <button class="ps-btn ps-btn-ghost" id="psCopyLink">Bagikan</button>
+        <button class="ps-btn ps-btn-ghost" id="psCopyLink">
+          <i class="fa-solid fa-link"></i><span>Bagikan</span>
+        </button>
       </div>
     <% } %>
   </div>
@@ -35,7 +35,7 @@
 <section class="ps-episodes">
   <div class="ps-episodes-head">
     <h2 class="ps-episodes-title">Episode</h2>
-    <div class="ps-episodes-sub">Virtual scroll aktif untuk performa VPS</div>
+    <div class="ps-episodes-sub">Virtual scroll untuk performa VPS</div>
   </div>
 
   <div class="ps-episode-rail" id="psEpisodeRail">
