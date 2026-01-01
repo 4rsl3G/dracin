@@ -4,35 +4,36 @@
   const cfg = window.__PANSTREAM__ && window.__PANSTREAM__.player;
   if (!cfg) return;
 
-  const $ = (q, el = document) => el.querySelector(q);
+  const video = document.getElementById('psVideo');
+  const shell = document.getElementById('psPlayerShell');
+  const overlay = document.getElementById('psOverlay');
+  const controls = document.getElementById('psControls');
+  const bigPlay = document.getElementById('psBigPlay');
 
-  const video = $('#psVideo');
-  const shell = $('#psPlayerShell');
-  const overlay = $('#psOverlay');
-  const controls = $('#psControls');
-  const bigPlay = $('#psBigPlay');
+  const playPause = document.getElementById('psPlayPause');
+  const rew = document.getElementById('psRew');
+  const fwd = document.getElementById('psFwd');
+  const nextBtn = document.getElementById('psNext');
+  const fsBtn = document.getElementById('psFs');
 
-  const playPause = $('#psPlayPause');
-  const rew = $('#psRew');
-  const fwd = $('#psFwd');
-  const nextBtn = $('#psNext');
-  const fsBtn = $('#psFs');
+  const fitFillBtn = document.getElementById('psFitFill');
 
-  const fitFillBtn = $('#psFitFill');
+  const timeNow = document.getElementById('psTimeNow');
+  const timeDur = document.getElementById('psTimeDur');
 
-  const timeNow = $('#psTimeNow');
-  const timeDur = $('#psTimeDur');
+  const progressWrap = document.getElementById('psProgressWrap');
+  const playedBar = document.getElementById('psPlayedBar');
+  const bufferBar = document.getElementById('psBufferBar');
+  const thumb = document.getElementById('psThumb');
 
-  const progressWrap = $('#psProgressWrap');
-  const playedBar = $('#psPlayedBar');
-  const bufferBar = $('#psBufferBar');
-  const thumb = $('#psThumb');
+  const muteBtn = document.getElementById('psMute');
+  const vol = document.getElementById('psVol');
 
-  const muteBtn = $('#psMute');
-  const vol = $('#psVol');
+  const toastEl = document.getElementById('psPlayerToast');
+  const theaterBtn = document.getElementById('psTheaterBtn');
 
-  const toastEl = $('#psPlayerToast');
-  const theaterBtn = $('#psTheaterBtn');
+  if (!video) return;
+  video.controls = false;
 
   function pToast(msg) {
     if (!toastEl) return;
@@ -42,10 +43,7 @@
     pToast._t = setTimeout(() => toastEl.classList.remove('is-show'), 1800);
   }
 
-  if (!video) return;
-
-  video.controls = false;
-
+  // state key
   const key = `panstream_progress:${cfg.shortPlayId}:${cfg.episodeId}`;
 
   // Fit/Fill preference
@@ -62,20 +60,24 @@
     try { localStorage.setItem(FF_KEY, v); } catch {}
   }
 
-  function applyFF(mode, isVertical) {
-    // When vertical:
-    // - FIT => contain (no crop)
-    // - FILL => cover (cinematic)
-    // When landscape: keep cover always (better cinema), button still works but will just toggle label style subtly.
-    if (!shell) return;
+  let isVertical = false;
+  let ffMode = getFF();
 
+  function setBtnIcon(btn, iconClass) {
+    if (!btn) return;
+    btn.innerHTML = `<i class="${iconClass}"></i>`;
+  }
+
+  function setBigIcon(iconClass) {
+    if (!bigPlay) return;
+    bigPlay.innerHTML = `<i class="${iconClass}"></i>`;
+  }
+
+  function applyFF(mode) {
+    if (!shell) return;
     shell.classList.toggle('is-fit', mode === 'fit');
     shell.classList.toggle('is-fill', mode === 'fill');
-
     if (fitFillBtn) fitFillBtn.textContent = mode.toUpperCase();
-
-    // only relevant on vertical; on landscape we keep cover but still store preference
-    if (!isVertical) return;
   }
 
   function fmt(t) {
@@ -84,7 +86,6 @@
     const s = Math.floor(t % 60);
     return `${m}:${String(s).padStart(2, '0')}`;
   }
-
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
   let idleT = null;
@@ -99,17 +100,11 @@
     }, 2500);
   }
 
-  function setPlayIcon() {
-    const playing = !video.paused && !video.ended;
-    if (bigPlay) bigPlay.textContent = playing ? '❚❚' : '▶';
-  }
-
   function saveProgress() {
     try {
       const cur = video.currentTime || 0;
       const dur = video.duration || 0;
-      const payload = { t: cur, d: dur, at: Date.now() };
-      localStorage.setItem(key, JSON.stringify(payload));
+      localStorage.setItem(key, JSON.stringify({ t: cur, d: dur, at: Date.now() }));
     } catch {}
   }
 
@@ -123,20 +118,6 @@
     } catch {
       return null;
     }
-  }
-
-  window.PSStore && window.PSStore.setState({
-    currentEpisode: { shortPlayId: cfg.shortPlayId, episodeId: cfg.episodeId },
-    videoProgress: window.PSStore.getState().videoProgress || {}
-  });
-
-  let loadedOnce = false;
-  let isVertical = false;
-  let ffMode = getFF(); // initial preference
-
-  async function loadVideoSource() {
-    video.src = cfg.src || '';
-    video.load();
   }
 
   function updateProgressUI() {
@@ -153,8 +134,7 @@
     try {
       if (bufferBar && dur > 0 && video.buffered && video.buffered.length) {
         const end = video.buffered.end(video.buffered.length - 1);
-        const bp = clamp(end / dur, 0, 1);
-        bufferBar.style.transform = `scaleX(${bp})`;
+        bufferBar.style.transform = `scaleX(${clamp(end / dur, 0, 1)})`;
       }
     } catch {}
   }
@@ -176,55 +156,44 @@
       seekTo(pct);
     };
 
-    progressWrap.addEventListener('mousedown', (e) => {
-      isDrag = true;
-      showControls();
-      onMove(e.clientX);
-    });
+    progressWrap.addEventListener('mousedown', (e) => { isDrag = true; showControls(); onMove(e.clientX); });
+    window.addEventListener('mousemove', (e) => { if (isDrag) onMove(e.clientX); });
+    window.addEventListener('mouseup', () => { if (!isDrag) return; isDrag = false; showControls(); });
 
-    window.addEventListener('mousemove', (e) => {
-      if (!isDrag) return;
-      onMove(e.clientX);
-    });
+    progressWrap.addEventListener('touchstart', (e) => { isDrag = true; showControls(); onMove(e.touches[0].clientX); }, { passive: true });
+    window.addEventListener('touchmove', (e) => { if (isDrag) onMove(e.touches[0].clientX); }, { passive: true });
+    window.addEventListener('touchend', () => { if (!isDrag) return; isDrag = false; showControls(); }, { passive: true });
+  }
 
-    window.addEventListener('mouseup', () => {
-      if (!isDrag) return;
-      isDrag = false;
-      showControls();
-    });
-
-    progressWrap.addEventListener('touchstart', (e) => {
-      isDrag = true;
-      showControls();
-      onMove(e.touches[0].clientX);
-    }, { passive: true });
-
-    window.addEventListener('touchmove', (e) => {
-      if (!isDrag) return;
-      onMove(e.touches[0].clientX);
-    }, { passive: true });
-
-    window.addEventListener('touchend', () => {
-      if (!isDrag) return;
-      isDrag = false;
-      showControls();
-    }, { passive: true });
+  function setPlayStateIcons() {
+    const playing = !video.paused && !video.ended;
+    setBtnIcon(playPause, playing ? 'fa-solid fa-pause' : 'fa-solid fa-play');
+    setBigIcon(playing ? 'fa-solid fa-pause' : 'fa-solid fa-play');
   }
 
   function togglePlay() {
     if (video.paused || video.ended) {
-      video.play().catch(() => {
-        pToast('Tidak bisa autoplay. Tap untuk play.');
-      });
+      video.play().catch(() => pToast('Tap untuk mulai.'));
     } else {
       video.pause();
     }
   }
 
+  // bind controls
   if (bigPlay) bigPlay.addEventListener('click', () => { showControls(); togglePlay(); });
   if (playPause) playPause.addEventListener('click', () => { showControls(); togglePlay(); });
-  if (rew) rew.addEventListener('click', () => { showControls(); video.currentTime = Math.max(0, (video.currentTime || 0) - 10); saveProgress(); });
-  if (fwd) fwd.addEventListener('click', () => { showControls(); video.currentTime = Math.min(video.duration || 0, (video.currentTime || 0) + 10); saveProgress(); });
+
+  if (rew) rew.addEventListener('click', () => {
+    showControls();
+    video.currentTime = Math.max(0, (video.currentTime || 0) - 10);
+    saveProgress();
+  });
+
+  if (fwd) fwd.addEventListener('click', () => {
+    showControls();
+    video.currentTime = Math.min(video.duration || 0, (video.currentTime || 0) + 10);
+    saveProgress();
+  });
 
   if (nextBtn) nextBtn.addEventListener('click', () => {
     if (!cfg.next) return;
@@ -234,11 +203,8 @@
   if (fsBtn) fsBtn.addEventListener('click', async () => {
     showControls();
     try {
-      if (!document.fullscreenElement) {
-        await shell.requestFullscreen();
-      } else {
-        await document.exitFullscreen();
-      }
+      if (!document.fullscreenElement) await shell.requestFullscreen();
+      else await document.exitFullscreen();
     } catch {
       pToast('Fullscreen tidak tersedia.');
     }
@@ -252,76 +218,51 @@
   if (muteBtn && vol) {
     muteBtn.addEventListener('click', () => {
       video.muted = !video.muted;
-      muteBtn.textContent = video.muted ? '🔇' : '🔊';
+      muteBtn.innerHTML = video.muted
+        ? '<i class="fa-solid fa-volume-xmark"></i>'
+        : '<i class="fa-solid fa-volume-high"></i>';
       showControls();
     });
+
     vol.addEventListener('input', () => {
       video.volume = Number(vol.value);
       if (video.volume === 0) {
         video.muted = true;
-        muteBtn.textContent = '🔇';
+        muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
       } else {
         video.muted = false;
-        muteBtn.textContent = '🔊';
+        muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
       }
       showControls();
     });
   }
 
-  // NEW: Fit/Fill toggle
   if (fitFillBtn) {
     fitFillBtn.addEventListener('click', () => {
       showControls();
       ffMode = (ffMode === 'fit') ? 'fill' : 'fit';
       setFF(ffMode);
-      applyFF(ffMode, isVertical);
+      applyFF(ffMode);
       pToast(ffMode === 'fit' ? 'FIT: tanpa crop' : 'FILL: cinematic');
     });
   }
 
+  // keyboard
   window.addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 
-    if (e.code === 'Space') {
-      e.preventDefault();
-      showControls();
-      togglePlay();
-    }
-    if (e.code === 'ArrowLeft') {
-      e.preventDefault();
-      showControls();
-      video.currentTime = Math.max(0, (video.currentTime || 0) - 5);
-      saveProgress();
-    }
-    if (e.code === 'ArrowRight') {
-      e.preventDefault();
-      showControls();
-      video.currentTime = Math.min(video.duration || 0, (video.currentTime || 0) + 5);
-      saveProgress();
-    }
-
-    // NEW: F key toggles Fit/Fill (optional, cinematic shortcut)
-    if (e.code === 'KeyF') {
-      e.preventDefault();
-      if (fitFillBtn) fitFillBtn.click();
-    }
+    if (e.code === 'Space') { e.preventDefault(); showControls(); togglePlay(); }
+    if (e.code === 'ArrowLeft') { e.preventDefault(); showControls(); video.currentTime = Math.max(0, (video.currentTime || 0) - 5); saveProgress(); }
+    if (e.code === 'ArrowRight') { e.preventDefault(); showControls(); video.currentTime = Math.min(video.duration || 0, (video.currentTime || 0) + 5); saveProgress(); }
+    if (e.code === 'KeyF' && fitFillBtn) { e.preventDefault(); fitFillBtn.click(); }
   });
 
   ['mousemove', 'touchstart', 'click'].forEach(evt => {
     shell && shell.addEventListener(evt, showControls, { passive: true });
   });
 
-  video.addEventListener('timeupdate', () => {
-    updateProgressUI();
-    saveProgress();
-
-    if (window.PSStore) {
-      const st = window.PSStore.getState();
-      const vp = { ...(st.videoProgress || {}) };
-      vp[key] = video.currentTime || 0;
-      window.PSStore.setState({ videoProgress: vp });
-    }
-  });
+  // events
+  video.addEventListener('timeupdate', () => { updateProgressUI(); saveProgress(); });
 
   video.addEventListener('loadedmetadata', () => {
     const vw = video.videoWidth || 0;
@@ -330,29 +271,23 @@
 
     if (shell) shell.classList.toggle('is-vertical', isVertical);
 
-    // apply current Fit/Fill preference
-    applyFF(ffMode, isVertical);
+    // apply fit/fill preference (stored)
+    applyFF(ffMode);
 
     updateProgressUI();
 
-    if (!loadedOnce) {
-      loadedOnce = true;
-
-      const p = loadProgress();
-      if (p && Number.isFinite(p.t) && (video.duration || 0) > 0) {
-        const safeT = Math.min(p.t, Math.max(0, (video.duration || 0) - 2));
-        if (safeT > 1) video.currentTime = safeT;
-      }
-
-      video.play().catch(() => {
-        pToast('Tap untuk mulai.');
-      });
+    const p = loadProgress();
+    if (p && Number.isFinite(p.t) && (video.duration || 0) > 0) {
+      const safeT = Math.min(p.t, Math.max(0, (video.duration || 0) - 2));
+      if (safeT > 1) video.currentTime = safeT;
     }
-    setPlayIcon();
+
+    video.play().catch(() => pToast('Tap untuk mulai.'));
+    setPlayStateIcons();
   });
 
-  video.addEventListener('play', () => { setPlayIcon(); showControls(); });
-  video.addEventListener('pause', () => { setPlayIcon(); showControls(); });
+  video.addEventListener('play', () => { setPlayStateIcons(); showControls(); });
+  video.addEventListener('pause', () => { setPlayStateIcons(); showControls(); });
   video.addEventListener('waiting', () => { pToast('Buffering…'); });
 
   video.addEventListener('ended', () => {
@@ -365,22 +300,20 @@
   });
 
   video.addEventListener('error', () => {
-    const err = video.error;
-    const code = err ? err.code : 0;
     pToast('Video error. Memuat ulang…');
-
-    setTimeout(() => {
-      if (code) {
-        video.load();
-        video.play().catch(() => {});
-      }
-    }, 700);
-
-    setTimeout(() => {
-      location.reload();
-    }, 1800);
+    setTimeout(() => { try { video.load(); video.play().catch(()=>{}); } catch {} }, 700);
+    setTimeout(() => { location.reload(); }, 1800);
   });
 
+  window.addEventListener('resize', () => showControls(), { passive: true });
+
+  // init icons
+  setPlayStateIcons();
+  if (rew) rew.innerHTML = `<i class="fa-solid fa-rotate-left"></i><span class="ps-ctl-mini">10</span>`;
+  if (fwd) fwd.innerHTML = `<i class="fa-solid fa-rotate-right"></i><span class="ps-ctl-mini">10</span>`;
+
+  // load source
+  video.src = cfg.src || '';
+  video.load();
   showControls();
-  loadVideoSource();
 })();
