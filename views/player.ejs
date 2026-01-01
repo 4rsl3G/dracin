@@ -1,0 +1,78 @@
+<%
+  const d = data?.detail || {};
+  const ep = data?.episode || {};
+  const nextEp = data?.nextEpisode || null;
+
+  const spid = String(d.shortPlayId || '');
+  const epid = String(ep.episodeId || '');
+  const epNo = ep.episodeNo ?? '';
+  const title = d.shortPlayName || '';
+  const src = ep.playVoucher || '';
+%>
+
+<section class="ps-player-page">
+  <div class="ps-player-topbar">
+    <a class="ps-back" href="/detail/<%= spid %>">← Kembali</a>
+    <div class="ps-player-now">
+      <div class="ps-player-title"><%= title %></div>
+      <div class="ps-player-ep">Episode <%= epNo %> • <%= ep.playClarity || '' %></div>
+    </div>
+    <button class="ps-icon-btn" id="psTheaterBtn" aria-label="Theater mode">◼</button>
+  </div>
+
+  <div class="ps-player-shell" id="psPlayerShell">
+    <video id="psVideo" class="ps-video" playsinline preload="metadata"></video>
+
+    <div class="ps-player-overlay" id="psOverlay">
+      <div class="ps-player-center">
+        <button class="ps-bigplay" id="psBigPlay" aria-label="Play/Pause">▶</button>
+      </div>
+
+      <div class="ps-player-controls" id="psControls">
+        <div class="ps-progress-wrap" id="psProgressWrap">
+          <div class="ps-progress">
+            <div class="ps-progress-buffer" id="psBufferBar"></div>
+            <div class="ps-progress-played" id="psPlayedBar"></div>
+            <div class="ps-progress-thumb" id="psThumb"></div>
+          </div>
+        </div>
+
+        <div class="ps-controls-row">
+          <div class="ps-controls-left">
+            <button class="ps-ctl" id="psPlayPause" aria-label="Play/Pause">⏯</button>
+            <button class="ps-ctl" id="psRew" aria-label="Rewind 10s">↺10</button>
+            <button class="ps-ctl" id="psFwd" aria-label="Forward 10s">10↻</button>
+
+            <div class="ps-time">
+              <span id="psTimeNow">0:00</span>
+              <span class="ps-time-sep">/</span>
+              <span id="psTimeDur">0:00</span>
+            </div>
+          </div>
+
+          <div class="ps-controls-right">
+            <div class="ps-vol">
+              <button class="ps-ctl" id="psMute" aria-label="Mute">🔊</button>
+              <input id="psVol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+            </div>
+
+            <button class="ps-ctl" id="psNext" aria-label="Next episode" <%= nextEp ? '' : 'disabled' %>>⏭</button>
+            <button class="ps-ctl" id="psFs" aria-label="Fullscreen">⛶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ps-player-toast" id="psPlayerToast"></div>
+  </div>
+
+  <script>
+    window.__PANSTREAM__ = window.__PANSTREAM__ || {};
+    window.__PANSTREAM__.player = <%- JSON.stringify({
+      shortPlayId: spid,
+      episodeId: epid,
+      src: src,
+      next: nextEp ? { episodeId: String(nextEp.episodeId), episodeNo: nextEp.episodeNo } : null
+    }) %>;
+  </script>
+</section>
