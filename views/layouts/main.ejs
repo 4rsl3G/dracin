@@ -8,6 +8,10 @@
 
   <link rel="preconnect" href="https://awscover.netshort.com" crossorigin>
   <link rel="preconnect" href="https://awscdn.netshort.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <!-- Font Awesome (NO emoji) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css">
 
   <link rel="stylesheet" href="/public/css/panstream.css" />
 
@@ -16,7 +20,8 @@
     window.__PANSTREAM__.route = "<%= meta?.route || '' %>";
   </script>
 </head>
-<body class="ps-body">
+
+<body class="ps-body ps-route-<%= meta?.route || '' %>">
   <div class="ps-bg-noise"></div>
 
   <header class="ps-nav" id="psNav">
@@ -32,7 +37,7 @@
 
       <div class="ps-actions">
         <button class="ps-search-btn" id="psOpenSearch" aria-label="Search">
-          <span class="ps-icon">⌕</span>
+          <i class="fa-solid fa-magnifying-glass"></i>
           <span class="ps-search-label">Search</span>
         </button>
       </div>
@@ -45,7 +50,9 @@
     <div class="ps-search-panel" role="dialog" aria-modal="true" aria-label="Search panel">
       <div class="ps-search-top">
         <div class="ps-search-title">Cari serial</div>
-        <button class="ps-icon-btn" id="psCloseSearchBtn" aria-label="Close">✕</button>
+        <button class="ps-icon-btn" id="psCloseSearchBtn" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <div class="ps-search-input-wrap">
@@ -64,6 +71,9 @@
   </main>
 
   <div class="ps-toast" id="psToast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- jQuery (AJAX wajib) -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 
   <script src="/public/js/cache.js"></script>
   <script src="/public/js/app.js"></script>
