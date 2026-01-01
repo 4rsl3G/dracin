@@ -18,6 +18,8 @@
   const nextBtn = $('#psNext');
   const fsBtn = $('#psFs');
 
+  const fitFillBtn = $('#psFitFill');
+
   const timeNow = $('#psTimeNow');
   const timeDur = $('#psTimeDur');
 
@@ -42,10 +44,39 @@
 
   if (!video) return;
 
-  // NO default UI
   video.controls = false;
 
   const key = `panstream_progress:${cfg.shortPlayId}:${cfg.episodeId}`;
+
+  // Fit/Fill preference
+  const FF_KEY = 'panstream_fitfill_v1'; // "fit" | "fill"
+  function getFF() {
+    try {
+      const v = localStorage.getItem(FF_KEY);
+      return (v === 'fit' || v === 'fill') ? v : 'fit';
+    } catch {
+      return 'fit';
+    }
+  }
+  function setFF(v) {
+    try { localStorage.setItem(FF_KEY, v); } catch {}
+  }
+
+  function applyFF(mode, isVertical) {
+    // When vertical:
+    // - FIT => contain (no crop)
+    // - FILL => cover (cinematic)
+    // When landscape: keep cover always (better cinema), button still works but will just toggle label style subtly.
+    if (!shell) return;
+
+    shell.classList.toggle('is-fit', mode === 'fit');
+    shell.classList.toggle('is-fill', mode === 'fill');
+
+    if (fitFillBtn) fitFillBtn.textContent = mode.toUpperCase();
+
+    // only relevant on vertical; on landscape we keep cover but still store preference
+    if (!isVertical) return;
+  }
 
   function fmt(t) {
     if (!Number.isFinite(t) || t < 0) t = 0;
@@ -65,7 +96,7 @@
     idleT = setTimeout(() => {
       overlay.classList.remove('is-active');
       controls.classList.remove('is-active');
-    }, 2500); // hide after 2.5s idle
+    }, 2500);
   }
 
   function setPlayIcon() {
@@ -94,17 +125,16 @@
     }
   }
 
-  // Required global state fields
   window.PSStore && window.PSStore.setState({
     currentEpisode: { shortPlayId: cfg.shortPlayId, episodeId: cfg.episodeId },
     videoProgress: window.PSStore.getState().videoProgress || {}
   });
 
   let loadedOnce = false;
+  let isVertical = false;
+  let ffMode = getFF(); // initial preference
 
   async function loadVideoSource() {
-    // Episode playVoucher source is provided by server render.
-    // If playVoucher expired and fails, reload episode data by reloading page (server will refresh cache).
     video.src = cfg.src || '';
     video.load();
   }
@@ -120,7 +150,6 @@
     if (playedBar) playedBar.style.transform = `scaleX(${pct})`;
     if (thumb) thumb.style.left = `${pct * 100}%`;
 
-    // buffer bar
     try {
       if (bufferBar && dur > 0 && video.buffered && video.buffered.length) {
         const end = video.buffered.end(video.buffered.length - 1);
@@ -138,7 +167,6 @@
     saveProgress();
   }
 
-  // Click scrub
   if (progressWrap) {
     let isDrag = false;
 
@@ -165,7 +193,6 @@
       showControls();
     });
 
-    // touch
     progressWrap.addEventListener('touchstart', (e) => {
       isDrag = true;
       showControls();
@@ -241,7 +268,17 @@
     });
   }
 
-  // Keyboard: Space play/pause, arrows seek
+  // NEW: Fit/Fill toggle
+  if (fitFillBtn) {
+    fitFillBtn.addEventListener('click', () => {
+      showControls();
+      ffMode = (ffMode === 'fit') ? 'fill' : 'fit';
+      setFF(ffMode);
+      applyFF(ffMode, isVertical);
+      pToast(ffMode === 'fit' ? 'FIT: tanpa crop' : 'FILL: cinematic');
+    });
+  }
+
   window.addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 
@@ -262,9 +299,14 @@
       video.currentTime = Math.min(video.duration || 0, (video.currentTime || 0) + 5);
       saveProgress();
     }
+
+    // NEW: F key toggles Fit/Fill (optional, cinematic shortcut)
+    if (e.code === 'KeyF') {
+      e.preventDefault();
+      if (fitFillBtn) fitFillBtn.click();
+    }
   });
 
-  // Activity to keep controls visible
   ['mousemove', 'touchstart', 'click'].forEach(evt => {
     shell && shell.addEventListener(evt, showControls, { passive: true });
   });
@@ -273,7 +315,6 @@
     updateProgressUI();
     saveProgress();
 
-    // global state: videoProgress
     if (window.PSStore) {
       const st = window.PSStore.getState();
       const vp = { ...(st.videoProgress || {}) };
@@ -283,6 +324,15 @@
   });
 
   video.addEventListener('loadedmetadata', () => {
+    const vw = video.videoWidth || 0;
+    const vh = video.videoHeight || 0;
+    isVertical = (vh > vw && vw > 0);
+
+    if (shell) shell.classList.toggle('is-vertical', isVertical);
+
+    // apply current Fit/Fill preference
+    applyFF(ffMode, isVertical);
+
     updateProgressUI();
 
     if (!loadedOnce) {
@@ -290,12 +340,10 @@
 
       const p = loadProgress();
       if (p && Number.isFinite(p.t) && (video.duration || 0) > 0) {
-        // resume last second (avoid resuming at very end)
         const safeT = Math.min(p.t, Math.max(0, (video.duration || 0) - 2));
         if (safeT > 1) video.currentTime = safeT;
       }
 
-      // Auto play
       video.play().catch(() => {
         pToast('Tap untuk mulai.');
       });
@@ -309,7 +357,6 @@
 
   video.addEventListener('ended', () => {
     saveProgress();
-    // Auto next episode
     if (cfg.next) {
       location.href = `/watch/${encodeURIComponent(cfg.shortPlayId)}/${encodeURIComponent(cfg.next.episodeId)}`;
     } else {
@@ -317,13 +364,11 @@
     }
   });
 
-  // Error handling video fail (expired playVoucher → reload page)
   video.addEventListener('error', () => {
     const err = video.error;
     const code = err ? err.code : 0;
     pToast('Video error. Memuat ulang…');
 
-    // Try reload once; if still error, hard reload page (refresh detail/episode data)
     setTimeout(() => {
       if (code) {
         video.load();
@@ -332,12 +377,10 @@
     }, 700);
 
     setTimeout(() => {
-      // If still cannot play, reload page to refresh playVoucher
       location.reload();
     }, 1800);
   });
 
-  // init
   showControls();
   loadVideoSource();
 })();
