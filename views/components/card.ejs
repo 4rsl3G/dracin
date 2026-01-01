@@ -1,0 +1,33 @@
+<%
+  const item = locals.item || {};
+  const id = String(item.shortPlayId || '');
+  const name = item.shortPlayName || '';
+  const cover = item.shortPlayCover;
+  const labels = Array.isArray(item.labelArray) ? item.labelArray : (Array.isArray(item.labelNameList) ? item.labelNameList : []);
+  const scriptName = item.scriptName || '';
+  const heat = item.heatScoreShow || item.formatHeatScore || item.heatScore || '';
+%>
+
+<a class="ps-card" href="/detail/<%= id %>" data-id="<%= id %>">
+  <div class="ps-card-poster" data-cover="<%= cover ? cover : '' %>">
+    <div class="ps-card-gradient"></div>
+    <div class="ps-card-badges">
+      <% if (scriptName) { %><span class="ps-badge ps-badge-accent"><%= scriptName %></span><% } %>
+      <% if (heat) { %><span class="ps-badge"><%= heat %></span><% } %>
+    </div>
+    <div class="ps-card-overlay">
+      <div class="ps-card-title"><%= name %></div>
+      <% if (labels && labels.length) { %>
+        <div class="ps-card-tags">
+          <% labels.slice(0,3).forEach((t)=> { %>
+            <span class="ps-tag"><%= t %></span>
+          <% }) %>
+        </div>
+      <% } %>
+      <div class="ps-card-cta">
+        <span class="ps-playdot">▶</span>
+        <span>Detail</span>
+      </div>
+    </div>
+  </div>
+</a>
