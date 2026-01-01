@@ -1,0 +1,10 @@
+<%
+  const count = Number(locals.count || 10);
+%>
+<div class="ps-skeleton-grid" aria-hidden="true">
+  <% for (let i=0;i<count;i++){ %>
+    <div class="ps-skeleton-card">
+      <div class="ps-skeleton-shimmer"></div>
+    </div>
+  <% } %>
+</div>
