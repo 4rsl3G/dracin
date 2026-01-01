@@ -1,0 +1,19 @@
+<%
+  const initial = data?.initial || { contentName:'', contentInfos:[] };
+  const items = Array.isArray(initial.contentInfos) ? initial.contentInfos : [];
+%>
+
+<section class="ps-pagehead">
+  <h1 class="ps-page-title"><%= initial.contentName || 'Semua Serial' %></h1>
+  <p class="ps-page-sub">Infinite scroll • Grid Netflix • Skeleton shimmer</p>
+</section>
+
+<div class="ps-browse-grid" id="psBrowseGrid">
+  <% items.forEach((item)=> { %>
+    <%- include('./components/card.ejs', { item }) %>
+  <% }) %>
+</div>
+
+<div class="ps-infinite" id="psInfinite">
+  <%- include('./components/skeleton.ejs', { count: 12 }) %>
+</div>
