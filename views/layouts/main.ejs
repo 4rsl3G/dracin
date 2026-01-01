@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0b0b" />
+  <title><%= title %></title>
+
+  <link rel="preconnect" href="https://awscover.netshort.com" crossorigin>
+  <link rel="preconnect" href="https://awscdn.netshort.com" crossorigin>
+
+  <link rel="stylesheet" href="/public/css/panstream.css" />
+
+  <script>
+    window.__PANSTREAM__ = window.__PANSTREAM__ || {};
+    window.__PANSTREAM__.route = "<%= meta?.route || '' %>";
+  </script>
+</head>
+<body class="ps-body">
+  <div class="ps-bg-noise"></div>
+
+  <header class="ps-nav" id="psNav">
+    <div class="ps-nav-inner">
+      <a class="ps-brand" href="/">
+        <span class="ps-logo">PAN</span><span class="ps-logo ps-logo-accent">STREAM</span>
+      </a>
+
+      <nav class="ps-links">
+        <a class="ps-link <%= (meta?.route==='home' ? 'is-active' : '') %>" href="/">Home</a>
+        <a class="ps-link <%= (meta?.route==='browse' ? 'is-active' : '') %>" href="/browse">Browse</a>
+      </nav>
+
+      <div class="ps-actions">
+        <button class="ps-search-btn" id="psOpenSearch" aria-label="Search">
+          <span class="ps-icon">⌕</span>
+          <span class="ps-search-label">Search</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search Overlay -->
+  <div class="ps-search-overlay" id="psSearchOverlay" aria-hidden="true">
+    <div class="ps-search-scrim" id="psCloseSearch"></div>
+    <div class="ps-search-panel" role="dialog" aria-modal="true" aria-label="Search panel">
+      <div class="ps-search-top">
+        <div class="ps-search-title">Cari serial</div>
+        <button class="ps-icon-btn" id="psCloseSearchBtn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="ps-search-input-wrap">
+        <input id="psSearchInput" class="ps-search-input" type="text" autocomplete="off" spellcheck="false"
+          placeholder="Ketik judul, mis. Pewaris..." />
+        <div class="ps-search-hint">Debounce 400ms • Realtime</div>
+      </div>
+
+      <div class="ps-search-results" id="psSearchResults"></div>
+      <div class="ps-search-empty" id="psSearchEmpty" hidden>Tidak ditemukan</div>
+    </div>
+  </div>
+
+  <main class="ps-main">
+    <%- include(`../${view}.ejs`, { data }) %>
+  </main>
+
+  <div class="ps-toast" id="psToast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="/public/js/cache.js"></script>
+  <script src="/public/js/app.js"></script>
+  <% if (meta?.route === 'player') { %>
+    <script src="/public/js/player.js"></script>
+  <% } %>
+</body>
+</html>
