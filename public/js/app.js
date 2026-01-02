@@ -3,6 +3,18 @@
 (function () {
   const route = (window.__PANSTREAM__ && window.__PANSTREAM__.route) || '';
 
+  // ===== AOS (optional) =====
+  function initAOS() {
+    if (!window.AOS) return;
+    window.AOS.init({
+      duration: 720,
+      easing: 'ease-out-quart',
+      once: true,
+      offset: 40
+    });
+  }
+  initAOS();
+
   // ===== Store (global state required) =====
   const store = (function createStore() {
     let state = {
@@ -46,7 +58,16 @@
   window.addEventListener('scroll', onScrollNav, { passive: true });
   onScrollNav();
 
-  // ===== Fallback cover (real inline SVG data URI) =====
+  // ===== Debounce =====
+  function debounce(fn, ms) {
+    let t = null;
+    return function (...args) {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, args), ms);
+    };
+  }
+
+  // ===== Fallback cover (SVG data URI) =====
   const fallback = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200">
       <defs>
@@ -62,33 +83,43 @@
     </svg>
   `)}`;
 
-  function applyCovers() {
-    $('.ps-card-poster, .ps-detail-hero').each(function () {
-      const url = $(this).attr('data-cover');
-      if (url && url !== 'null') $(this).css('background-image', `url("${url}")`);
-      else $(this).css('background-image', `url("${fallback}")`);
-    });
+  // ===== Lazy BG (poster/hero) + fallback =====
+  function setBg(el, url) {
+    if (!el) return;
+    const u = (url && url !== 'null') ? url : fallback;
+    el.style.backgroundImage = `url("${u}")`;
+    el.classList.add('is-loaded');
+    el.removeAttribute('data-bg');
+    el.removeAttribute('data-cover');
   }
-  applyCovers();
 
-  // ===== Row scroll buttons =====
-  $('.ps-row-btn').on('click', function () {
-    const rid = $(this).attr('data-row');
-    const dir = Number($(this).attr('data-dir') || 1);
-    const rail = document.getElementById(`row_${rid}`);
-    if (!rail) return;
-    const amount = Math.max(rail.clientWidth * 0.9, 320);
-    rail.scrollBy({ left: amount * dir, behavior: 'smooth' });
-  });
+  function lazyBgInit() {
+    const nodes = Array.from(document.querySelectorAll('[data-bg], [data-cover]'));
+    if (!nodes.length) return;
 
-  // ===== Debounce =====
-  function debounce(fn, ms) {
-    let t = null;
-    return function (...args) {
-      clearTimeout(t);
-      t = setTimeout(() => fn.apply(this, args), ms);
+    const load = (el) => {
+      const url = el.getAttribute('data-bg') || el.getAttribute('data-cover');
+      setBg(el, url);
     };
+
+    if (!('IntersectionObserver' in window)) {
+      nodes.forEach(load);
+      return;
+    }
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          load(e.target);
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '220px' });
+
+    nodes.forEach(el => io.observe(el));
   }
+
+  lazyBgInit();
 
   // ===== jQuery AJAX helper with 429 handling =====
   function ajaxJson(url, opts = {}) {
@@ -152,17 +183,20 @@
 
       const $card = $(`
         <a class="ps-search-item" href="/detail/${encodeURIComponent(id)}">
-          <div class="ps-search-poster"></div>
+          <div class="ps-search-poster ps-lazy-bg" data-bg="${escapeHtml(cover)}"></div>
           <div class="ps-search-info">
             <div class="ps-search-name">${titleHtml}</div>
             <div class="ps-search-intro">${escapeHtml(intro)}</div>
-            <div class="ps-search-meta">${heat ? `<span class="ps-badge">${escapeHtml(heat)}</span>` : ''}</div>
+            <div class="ps-search-meta">${heat ? `<span class="ps-badge ps-badge-chip"><i class="ri-fire-fill"></i> ${escapeHtml(heat)}</span>` : ''}</div>
           </div>
         </a>
       `);
-      $card.find('.ps-search-poster').css('background-image', `url('${cover}')`);
+
       $resultsEl.append($card);
     });
+
+    lazyBgInit();
+    if (window.AOS && window.AOS.refreshHard) window.AOS.refreshHard();
   }
 
   const doSearch = debounce(() => {
@@ -192,6 +226,32 @@
 
   $input.on('input', doSearch);
 
+  // ===== Row scroll buttons (magnetic) + auto-hide if not scrollable =====
+  function canScrollX(el) {
+    return el && el.scrollWidth > el.clientWidth + 4;
+  }
+
+  $('.ps-row-btn').on('click', function () {
+    const rid = $(this).attr('data-row');
+    const dir = Number($(this).attr('data-dir') || 1);
+    const rail = document.getElementById(`row_${rid}`);
+    if (!rail) return;
+
+    const amount = Math.max(260, Math.floor(rail.clientWidth * 0.82));
+    rail.scrollBy({ left: amount * dir, behavior: 'smooth' });
+  });
+
+  function syncRowControls() {
+    document.querySelectorAll('.ps-row').forEach(section => {
+      const rail = section.querySelector('.ps-row-rail');
+      const controls = section.querySelector('.ps-row-controls');
+      if (!rail || !controls) return;
+      controls.style.display = canScrollX(rail) ? '' : 'none';
+    });
+  }
+  syncRowControls();
+  window.addEventListener('resize', debounce(syncRowControls, 120), { passive: true });
+
   // ===== Browse infinite (AJAX + retry 1x) =====
   const $grid = $('#psBrowseGrid');
   const $inf = $('#psInfinite');
@@ -213,22 +273,23 @@
     const scriptName = item.scriptName || '';
     const heat = item.heatScoreShow || '';
 
-    const tags = labels.slice(0, 3).map(t => `<span class="ps-tag">${escapeHtml(t)}</span>`).join('');
+    const tags = labels.slice(0, 3).map(t => `<span class="ps-tag ps-tag-v2">${escapeHtml(t)}</span>`).join('');
 
     return `
-      <a class="ps-card" href="/detail/${encodeURIComponent(id)}" data-id="${escapeHtml(id)}">
-        <div class="ps-card-poster" style="background-image:url('${cover}')">
-          <div class="ps-card-gradient"></div>
-          <div class="ps-card-badges">
-            ${scriptName ? `<span class="ps-badge ps-badge-accent">${escapeHtml(scriptName)}</span>` : ''}
-            ${heat ? `<span class="ps-badge">${escapeHtml(heat)}</span>` : ''}
+      <a class="ps-card ps-card-v2" href="/detail/${encodeURIComponent(id)}" data-id="${escapeHtml(id)}">
+        <div class="ps-card-poster ps-card-poster-v2 ps-lazy-bg" data-bg="${escapeHtml(cover)}">
+          <div class="ps-card-glow"></div>
+          <div class="ps-card-gradient ps-card-gradient-v2"></div>
+          <div class="ps-card-badges ps-card-badges-v2">
+            ${scriptName ? `<span class="ps-badge ps-badge-accent ps-badge-chip">${escapeHtml(scriptName)}</span>` : ''}
+            ${heat ? `<span class="ps-badge ps-badge-chip"><i class="ri-fire-fill"></i> ${escapeHtml(heat)}</span>` : ''}
           </div>
-          <div class="ps-card-overlay">
-            <div class="ps-card-title">${escapeHtml(name)}</div>
-            ${tags ? `<div class="ps-card-tags">${tags}</div>` : ''}
-            <div class="ps-card-cta">
-              <span class="ps-playdot"><i class="fa-solid fa-play"></i></span>
-              <span>Detail</span>
+          <div class="ps-card-overlay ps-card-overlay-v2">
+            <div class="ps-card-title ps-card-title-v2">${escapeHtml(name)}</div>
+            ${tags ? `<div class="ps-card-tags ps-card-tags-v2">${tags}</div>` : ''}
+            <div class="ps-card-cta ps-card-cta-v2">
+              <span class="ps-playdot ps-playdot-v2"><i class="ri-play-fill"></i></span>
+              <span class="ps-card-cta-text">Lihat detail</span>
             </div>
           </div>
         </div>
@@ -278,6 +339,9 @@
           frag.appendChild(wrap.firstElementChild);
         });
         $grid[0].appendChild(frag);
+
+        lazyBgInit();
+        if (window.AOS && window.AOS.refreshHard) window.AOS.refreshHard();
 
         isLoading = false;
         showSkeleton(false);
@@ -342,15 +406,17 @@
 
           return `
             <a class="ps-ep" href="/watch/${encodeURIComponent(detail.shortPlayId)}/${encodeURIComponent(ep.episodeId)}">
-              <div class="ps-ep-cover" style="background-image:url('${cover}')"></div>
+              <div class="ps-ep-cover ps-lazy-bg" data-bg="${escapeHtml(cover)}"></div>
               <div class="ps-ep-info">
                 <div class="ps-ep-title">Episode ${ep.episodeNo}${ep.playClarity ? ` • ${escapeHtml(ep.playClarity)}` : ''}</div>
                 <div class="ps-ep-meta">${tags || '<span class="ps-ep-dim">Siap diputar</span>'}</div>
               </div>
-              <div class="ps-ep-go"><i class="fa-solid fa-play"></i></div>
+              <div class="ps-ep-go"><i class="ri-play-fill"></i></div>
             </a>
           `;
         }).join('');
+
+        lazyBgInit();
       }
 
       rail.addEventListener('scroll', debounce(render, 16), { passive: true });
