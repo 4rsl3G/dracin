@@ -3,12 +3,21 @@
   const items = Array.isArray(initial.contentInfos) ? initial.contentInfos : [];
 %>
 
-<section class="ps-pagehead">
-  <h1 class="ps-page-title"><%= initial.contentName || 'Semua Serial' %></h1>
-  <p class="ps-page-sub">Infinite scroll • Netflix grid • Skeleton shimmer</p>
+<section class="ps-pagehead ps-pagehead-v2" data-aos="fade-up">
+  <div class="ps-pagehead-left">
+    <h1 class="ps-page-title ps-page-title-v2"><%= initial.contentName || 'Semua Serial' %></h1>
+    <p class="ps-page-sub ps-page-sub-v2">Discover feed • Lazy posters • Smooth infinite</p>
+  </div>
+
+  <div class="ps-pagehead-right" data-aos="fade-up" data-aos-delay="120">
+    <div class="ps-chip">
+      <i class="ri-sparkling-2-fill"></i>
+      <span>Kurasi harian</span>
+    </div>
+  </div>
 </section>
 
-<div class="ps-browse-grid" id="psBrowseGrid">
+<div class="ps-browse-grid ps-browse-grid-v2" id="psBrowseGrid" data-aos="fade-up" data-aos-delay="120">
   <% items.forEach((item)=> { %>
     <%- include('./components/card.ejs', { item }) %>
   <% }) %>
