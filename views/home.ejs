@@ -3,41 +3,51 @@
   const error = data?.error;
 %>
 
-<section class="ps-hero">
+<section class="ps-hero" data-aos="fade-up">
   <div class="ps-hero-bg"></div>
   <div class="ps-hero-inner">
-    <div class="ps-hero-kicker">
-      <i class="fa-solid fa-film"></i>
+    <div class="ps-hero-kicker" data-aos="zoom-in" data-aos-delay="80">
+      <i class="ri-movie-2-fill"></i>
       <span>Streaming sinematik</span>
     </div>
-    <h1 class="ps-hero-title">PANSTREAM</h1>
-    <p class="ps-hero-sub">
-      UI/UX premium, player kustom, browsing mulus, dan search realtime.
+
+    <h1 class="ps-hero-title ps-glow-title" data-aos="fade-up" data-aos-delay="120">PANSTREAM</h1>
+
+    <p class="ps-hero-sub" data-aos="fade-up" data-aos-delay="180">
+      UI/UX premium, player portrait, browsing mulus, dan search realtime.
     </p>
-    <div class="ps-hero-actions">
+
+    <div class="ps-hero-actions" data-aos="fade-up" data-aos-delay="240">
       <a class="ps-btn ps-btn-accent" href="/browse">
-        <i class="fa-solid fa-compass"></i>
+        <i class="ri-compass-3-fill"></i>
         <span>Mulai Browse</span>
       </a>
       <button class="ps-btn ps-btn-ghost" id="psOpenSearch2">
-        <i class="fa-solid fa-magnifying-glass"></i>
+        <i class="ri-search-line"></i>
         <span>Cari Serial</span>
       </button>
+    </div>
+
+    <div class="ps-scrollhint" aria-hidden="true" data-aos="fade-up" data-aos-delay="320">
+      <span class="ps-scrollhint-dot"></span>
+      <span class="ps-scrollhint-text">Scroll untuk lihat koleksi</span>
     </div>
   </div>
 </section>
 
 <% if (error) { %>
-  <div class="ps-alert"><%= error %></div>
+  <div class="ps-alert" data-aos="fade-up"><%= error %></div>
 <% } %>
 
 <div class="ps-content">
-  <% theaters.forEach((row) => { %>
-    <%- include('./components/row.ejs', { row }) %>
+  <% theaters.forEach((row, idx) => { %>
+    <div data-aos="fade-up" data-aos-delay="<%= Math.min(120, idx * 40) %>">
+      <%- include('./components/row.ejs', { row }) %>
+    </div>
   <% }) %>
 
   <% if (!theaters.length) { %>
-    <div class="ps-empty-block">
+    <div class="ps-empty-block" data-aos="fade-up">
       <div class="ps-empty-title">Tidak ada konten untuk ditampilkan.</div>
       <div class="ps-empty-sub">Coba lagi beberapa saat.</div>
     </div>
