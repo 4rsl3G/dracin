@@ -10,8 +10,18 @@
   <link rel="preconnect" href="https://awscdn.netshort.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <!-- Font Awesome (NO emoji) -->
+  <!-- Premium fonts -->
+  <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+  <link rel="stylesheet" href="https://fonts.bunny.net/css?family=clash-display:600,700|satoshi:400,500,700">
+
+  <!-- Remix Icon -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css">
+
+  <!-- Font Awesome (optional; legacy icons) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.6.0/css/all.min.css">
+
+  <!-- AOS -->
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
 
   <link rel="stylesheet" href="/public/css/panstream.css" />
 
@@ -37,7 +47,7 @@
 
       <div class="ps-actions">
         <button class="ps-search-btn" id="psOpenSearch" aria-label="Search">
-          <i class="fa-solid fa-magnifying-glass"></i>
+          <i class="ri-search-line"></i>
           <span class="ps-search-label">Search</span>
         </button>
       </div>
@@ -51,7 +61,7 @@
       <div class="ps-search-top">
         <div class="ps-search-title">Cari serial</div>
         <button class="ps-icon-btn" id="psCloseSearchBtn" aria-label="Close">
-          <i class="fa-solid fa-xmark"></i>
+          <i class="ri-close-line"></i>
         </button>
       </div>
 
@@ -71,6 +81,9 @@
   </main>
 
   <div class="ps-toast" id="psToast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- AOS -->
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
 
   <!-- jQuery (AJAX wajib) -->
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
