@@ -5,22 +5,26 @@
   const rid = String(row.groupId || Math.random()).replace(/\W+/g,'');
 %>
 
-<section class="ps-row" aria-label="<%= title %>">
-  <div class="ps-row-head">
-    <h2 class="ps-row-title"><%= title %></h2>
-    <div class="ps-row-controls">
-      <button class="ps-row-btn" data-row="<%= rid %>" data-dir="-1" aria-label="Scroll left">
-        <i class="fa-solid fa-chevron-left"></i>
+<section class="ps-row ps-row-v2" aria-label="<%= title %>" data-aos="fade-up">
+  <div class="ps-row-head ps-row-head-v2">
+    <div class="ps-row-head-left">
+      <h2 class="ps-row-title ps-row-title-v2"><%= title %></h2>
+      <div class="ps-row-sub">Pilihan untuk kamu</div>
+    </div>
+
+    <div class="ps-row-controls ps-row-controls-v2">
+      <button class="ps-row-btn ps-row-btn-v2" data-row="<%= rid %>" data-dir="-1" aria-label="Scroll left">
+        <i class="ri-arrow-left-s-line"></i>
       </button>
-      <button class="ps-row-btn" data-row="<%= rid %>" data-dir="1" aria-label="Scroll right">
-        <i class="fa-solid fa-chevron-right"></i>
+      <button class="ps-row-btn ps-row-btn-v2" data-row="<%= rid %>" data-dir="1" aria-label="Scroll right">
+        <i class="ri-arrow-right-s-line"></i>
       </button>
     </div>
   </div>
 
-  <div class="ps-row-rail" id="row_<%= rid %>">
-    <% infos.forEach((item) => { %>
-      <div class="ps-row-item">
+  <div class="ps-row-rail ps-row-rail-v2" id="row_<%= rid %>" data-row-rail="<%= rid %>" data-aos="fade-up" data-aos-delay="120">
+    <% infos.forEach((item, idx) => { %>
+      <div class="ps-row-item ps-row-item-v2" data-aos="zoom-in" data-aos-delay="<%= Math.min(180, idx * 18) %>">
         <%- include('./card.ejs', { item }) %>
       </div>
     <% }) %>
