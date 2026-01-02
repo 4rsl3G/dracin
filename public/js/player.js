@@ -32,7 +32,7 @@
   const toastEl = document.getElementById('psPlayerToast');
   const theaterBtn = document.getElementById('psTheaterBtn');
 
-  if (!video) return;
+  if (!video || !shell) return;
   video.controls = false;
 
   function pToast(msg) {
@@ -40,41 +40,36 @@
     toastEl.textContent = msg;
     toastEl.classList.add('is-show');
     clearTimeout(pToast._t);
-    pToast._t = setTimeout(() => toastEl.classList.remove('is-show'), 1800);
+    pToast._t = setTimeout(() => toastEl.classList.remove('is-show'), 1600);
   }
 
-  // state key
   const key = `panstream_progress:${cfg.shortPlayId}:${cfg.episodeId}`;
 
-  // Fit/Fill preference
-  const FF_KEY = 'panstream_fitfill_v1'; // "fit" | "fill"
+  const FF_KEY = 'panstream_fitfill_v1';
   function getFF() {
     try {
       const v = localStorage.getItem(FF_KEY);
-      return (v === 'fit' || v === 'fill') ? v : 'fit';
+      return (v === 'fit' || v === 'fill') ? v : 'fill';
     } catch {
-      return 'fit';
+      return 'fill';
     }
   }
   function setFF(v) {
     try { localStorage.setItem(FF_KEY, v); } catch {}
   }
 
-  let isVertical = false;
   let ffMode = getFF();
 
   function setBtnIcon(btn, iconClass) {
     if (!btn) return;
     btn.innerHTML = `<i class="${iconClass}"></i>`;
   }
-
   function setBigIcon(iconClass) {
     if (!bigPlay) return;
     bigPlay.innerHTML = `<i class="${iconClass}"></i>`;
   }
 
   function applyFF(mode) {
-    if (!shell) return;
     shell.classList.toggle('is-fit', mode === 'fit');
     shell.classList.toggle('is-fill', mode === 'fill');
     if (fitFillBtn) fitFillBtn.textContent = mode.toUpperCase();
@@ -89,15 +84,19 @@
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
   let idleT = null;
-  function showControls() {
+  let dragging = false;
+
+  function showControls(ms = 2500) {
     if (!overlay || !controls) return;
     overlay.classList.add('is-active');
     controls.classList.add('is-active');
     clearTimeout(idleT);
+    if (ms <= 0) return;
     idleT = setTimeout(() => {
+      if (dragging) return;
       overlay.classList.remove('is-active');
       controls.classList.remove('is-active');
-    }, 2500);
+    }, ms);
   }
 
   function saveProgress() {
@@ -148,27 +147,47 @@
   }
 
   if (progressWrap) {
-    let isDrag = false;
-
     const onMove = (clientX) => {
       const rect = progressWrap.getBoundingClientRect();
       const pct = (clientX - rect.left) / rect.width;
       seekTo(pct);
     };
 
-    progressWrap.addEventListener('mousedown', (e) => { isDrag = true; showControls(); onMove(e.clientX); });
-    window.addEventListener('mousemove', (e) => { if (isDrag) onMove(e.clientX); });
-    window.addEventListener('mouseup', () => { if (!isDrag) return; isDrag = false; showControls(); });
+    progressWrap.addEventListener('mousedown', (e) => {
+      dragging = true;
+      showControls(0);
+      onMove(e.clientX);
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      onMove(e.clientX);
+    });
+    window.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      showControls();
+    });
 
-    progressWrap.addEventListener('touchstart', (e) => { isDrag = true; showControls(); onMove(e.touches[0].clientX); }, { passive: true });
-    window.addEventListener('touchmove', (e) => { if (isDrag) onMove(e.touches[0].clientX); }, { passive: true });
-    window.addEventListener('touchend', () => { if (!isDrag) return; isDrag = false; showControls(); }, { passive: true });
+    progressWrap.addEventListener('touchstart', (e) => {
+      dragging = true;
+      showControls(0);
+      onMove(e.touches[0].clientX);
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      onMove(e.touches[0].clientX);
+    }, { passive: true });
+    window.addEventListener('touchend', () => {
+      if (!dragging) return;
+      dragging = false;
+      showControls();
+    }, { passive: true });
   }
 
   function setPlayStateIcons() {
     const playing = !video.paused && !video.ended;
-    setBtnIcon(playPause, playing ? 'fa-solid fa-pause' : 'fa-solid fa-play');
-    setBigIcon(playing ? 'fa-solid fa-pause' : 'fa-solid fa-play');
+    setBtnIcon(playPause, playing ? 'ri-pause-fill' : 'ri-play-fill');
+    setBigIcon(playing ? 'ri-pause-fill' : 'ri-play-fill');
   }
 
   function togglePlay() {
@@ -179,7 +198,6 @@
     }
   }
 
-  // bind controls
   if (bigPlay) bigPlay.addEventListener('click', () => { showControls(); togglePlay(); });
   if (playPause) playPause.addEventListener('click', () => { showControls(); togglePlay(); });
 
@@ -215,24 +233,24 @@
     showControls();
   });
 
+  function syncMuteIcon() {
+    if (!muteBtn) return;
+    muteBtn.innerHTML = video.muted || video.volume === 0
+      ? '<i class="ri-volume-mute-fill"></i>'
+      : '<i class="ri-volume-up-fill"></i>';
+  }
+
   if (muteBtn && vol) {
     muteBtn.addEventListener('click', () => {
       video.muted = !video.muted;
-      muteBtn.innerHTML = video.muted
-        ? '<i class="fa-solid fa-volume-xmark"></i>'
-        : '<i class="fa-solid fa-volume-high"></i>';
+      syncMuteIcon();
       showControls();
     });
 
     vol.addEventListener('input', () => {
       video.volume = Number(vol.value);
-      if (video.volume === 0) {
-        video.muted = true;
-        muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
-      } else {
-        video.muted = false;
-        muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-      }
+      video.muted = (video.volume === 0);
+      syncMuteIcon();
       showControls();
     });
   }
@@ -247,7 +265,6 @@
     });
   }
 
-  // keyboard
   window.addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 
@@ -257,23 +274,60 @@
     if (e.code === 'KeyF' && fitFillBtn) { e.preventDefault(); fitFillBtn.click(); }
   });
 
-  ['mousemove', 'touchstart', 'click'].forEach(evt => {
-    shell && shell.addEventListener(evt, showControls, { passive: true });
+  // Gesture: double tap seek + long press 2x
+  let lastTapAt = 0;
+  let pressT = null;
+  let boosted = false;
+
+  function setSpeed(rate) {
+    try {
+      video.playbackRate = rate;
+      boosted = (rate > 1);
+      if (boosted) pToast(`Speed ${rate}x`);
+    } catch {}
+  }
+
+  shell.addEventListener('touchstart', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    showControls();
+
+    clearTimeout(pressT);
+    pressT = setTimeout(() => { setSpeed(2); }, 420);
+  }, { passive: true });
+
+  shell.addEventListener('touchend', () => {
+    clearTimeout(pressT);
+    if (boosted) setSpeed(1);
+  }, { passive: true });
+
+  shell.addEventListener('click', (e) => {
+    const now = Date.now();
+    const x = (e.clientX || 0);
+    const dt = now - lastTapAt;
+
+    if (dt < 280) {
+      const rect = shell.getBoundingClientRect();
+      const leftSide = x < rect.left + rect.width * 0.5;
+      const delta = leftSide ? -10 : 10;
+      video.currentTime = clamp((video.currentTime || 0) + delta, 0, video.duration || 0);
+      saveProgress();
+      pToast(leftSide ? 'Mundur 10s' : 'Maju 10s');
+      lastTapAt = 0;
+      return;
+    }
+
+    lastTapAt = now;
+    showControls();
   });
 
-  // events
+  ['mousemove', 'touchstart'].forEach(evt => {
+    shell.addEventListener(evt, () => showControls(), { passive: true });
+  });
+
   video.addEventListener('timeupdate', () => { updateProgressUI(); saveProgress(); });
 
   video.addEventListener('loadedmetadata', () => {
-    const vw = video.videoWidth || 0;
-    const vh = video.videoHeight || 0;
-    isVertical = (vh > vw && vw > 0);
-
-    if (shell) shell.classList.toggle('is-vertical', isVertical);
-
-    // apply fit/fill preference (stored)
     applyFF(ffMode);
-
     updateProgressUI();
 
     const p = loadProgress();
@@ -307,13 +361,35 @@
 
   window.addEventListener('resize', () => showControls(), { passive: true });
 
-  // init icons
+  // Init icons
   setPlayStateIcons();
-  if (rew) rew.innerHTML = `<i class="fa-solid fa-rotate-left"></i><span class="ps-ctl-mini">10</span>`;
-  if (fwd) fwd.innerHTML = `<i class="fa-solid fa-rotate-right"></i><span class="ps-ctl-mini">10</span>`;
+  if (rew) rew.innerHTML = `<i class="ri-rewind-fill"></i><span class="ps-ctl-mini">10</span>`;
+  if (fwd) fwd.innerHTML = `<i class="ri-speed-fill"></i><span class="ps-ctl-mini">10</span>`;
+  if (fsBtn) fsBtn.innerHTML = `<i class="ri-aspect-ratio-line"></i>`;
+  if (theaterBtn) theaterBtn.innerHTML = `<i class="ri-expand-diagonal-line"></i>`;
+  if (nextBtn) nextBtn.innerHTML = `<i class="ri-skip-forward-fill"></i>`;
+  syncMuteIcon();
 
-  // load source
-  video.src = cfg.src || '';
-  video.load();
+  // Lazy load src
+  function setSrc() {
+    if (!cfg.src) return;
+    if (video.dataset.src) return;
+    video.dataset.src = cfg.src;
+    video.src = cfg.src;
+    video.load();
+  }
+
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setSrc();
+        io.disconnect();
+      }
+    }, { threshold: 0.12 });
+    io.observe(video);
+  } else {
+    setSrc();
+  }
+
   showControls();
 })();
