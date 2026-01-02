@@ -2,31 +2,42 @@
   const item = locals.item || {};
   const id = String(item.shortPlayId || '');
   const name = item.shortPlayName || '';
-  const cover = item.shortPlayCover;
-  const labels = Array.isArray(item.labelArray) ? item.labelArray : (Array.isArray(item.labelNameList) ? item.labelNameList : []);
+  const cover = item.shortPlayCover && item.shortPlayCover !== 'null' ? item.shortPlayCover : '';
+  const labels = Array.isArray(item.labelArray)
+    ? item.labelArray
+    : (Array.isArray(item.labelNameList) ? item.labelNameList : []);
   const scriptName = item.scriptName || '';
   const heat = item.heatScoreShow || item.formatHeatScore || item.heatScore || '';
 %>
 
-<a class="ps-card" href="/detail/<%= id %>" data-id="<%= id %>">
-  <div class="ps-card-poster" data-cover="<%= cover ? cover : '' %>">
-    <div class="ps-card-gradient"></div>
-    <div class="ps-card-badges">
-      <% if (scriptName) { %><span class="ps-badge ps-badge-accent"><%= scriptName %></span><% } %>
-      <% if (heat) { %><span class="ps-badge"><%= heat %></span><% } %>
+<a class="ps-card ps-card-v2" href="/detail/<%= id %>" data-id="<%= id %>" data-aos="fade-up">
+  <div class="ps-card-poster ps-card-poster-v2 ps-lazy-bg" data-bg="<%= cover %>">
+    <div class="ps-card-glow"></div>
+    <div class="ps-card-gradient ps-card-gradient-v2"></div>
+
+    <div class="ps-card-badges ps-card-badges-v2">
+      <% if (scriptName) { %>
+        <span class="ps-badge ps-badge-accent ps-badge-chip"><%= scriptName %></span>
+      <% } %>
+      <% if (heat) { %>
+        <span class="ps-badge ps-badge-chip"><i class="ri-fire-fill"></i> <%= heat %></span>
+      <% } %>
     </div>
-    <div class="ps-card-overlay">
-      <div class="ps-card-title"><%= name %></div>
+
+    <div class="ps-card-overlay ps-card-overlay-v2">
+      <div class="ps-card-title ps-card-title-v2"><%= name %></div>
+
       <% if (labels && labels.length) { %>
-        <div class="ps-card-tags">
+        <div class="ps-card-tags ps-card-tags-v2">
           <% labels.slice(0,3).forEach((t)=> { %>
-            <span class="ps-tag"><%= t %></span>
+            <span class="ps-tag ps-tag-v2"><%= t %></span>
           <% }) %>
         </div>
       <% } %>
-      <div class="ps-card-cta">
-        <span class="ps-playdot"><i class="fa-solid fa-play"></i></span>
-        <span>Detail</span>
+
+      <div class="ps-card-cta ps-card-cta-v2">
+        <span class="ps-playdot ps-playdot-v2"><i class="ri-play-fill"></i></span>
+        <span class="ps-card-cta-text">Lihat detail</span>
       </div>
     </div>
   </div>
