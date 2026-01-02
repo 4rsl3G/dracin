@@ -11,35 +11,49 @@
 %>
 
 <section class="ps-player-stage" id="psPlayerStage">
+  <!-- HUD -->
   <div class="ps-player-hud">
     <a class="ps-hud-back" href="/detail/<%= spid %>" aria-label="Back">
-      <i class="fa-solid fa-arrow-left"></i>
+      <i class="ri-arrow-left-line"></i>
     </a>
 
     <div class="ps-hud-meta">
       <div class="ps-hud-title"><%= title %></div>
-      <div class="ps-hud-sub">Episode <%= epNo %><% if (ep.playClarity) { %> • <%= ep.playClarity %><% } %></div>
+      <div class="ps-hud-sub">
+        Episode <%= epNo %><% if (ep.playClarity) { %> • <%= ep.playClarity %><% } %>
+      </div>
     </div>
 
     <div class="ps-hud-actions">
-      <button class="ps-hud-btn" id="psTheaterBtn" aria-label="Theater mode">
-        <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+      <button class="ps-hud-btn" id="psTheaterBtn" aria-label="Theater mode" title="Theater">
+        <i class="ri-expand-diagonal-line"></i>
       </button>
     </div>
   </div>
 
+  <!-- Player -->
   <div class="ps-player-shell" id="psPlayerShell">
     <video id="psVideo" class="ps-video" playsinline preload="metadata"></video>
 
     <div class="ps-player-overlay" id="psOverlay">
+      <!-- Center play -->
       <div class="ps-player-center">
         <button class="ps-bigplay" id="psBigPlay" aria-label="Play/Pause">
-          <i class="fa-solid fa-play"></i>
+          <i class="ri-play-fill"></i>
         </button>
+
+        <!-- Gesture hint (auto hidden via CSS after a moment) -->
+        <div class="ps-gesture-hint" aria-hidden="true">
+          <div class="ps-gesture-pill">
+            <i class="ri-hand-heart-line"></i>
+            <span>Double tap: ±10s • Hold: 2x</span>
+          </div>
+        </div>
       </div>
 
+      <!-- Controls -->
       <div class="ps-player-controls" id="psControls">
-        <div class="ps-progress-wrap" id="psProgressWrap">
+        <div class="ps-progress-wrap" id="psProgressWrap" aria-label="Seek bar">
           <div class="ps-progress">
             <div class="ps-progress-buffer" id="psBufferBar"></div>
             <div class="ps-progress-played" id="psPlayedBar"></div>
@@ -49,19 +63,21 @@
 
         <div class="ps-controls-row">
           <div class="ps-controls-left">
-            <button class="ps-ctl" id="psPlayPause" aria-label="Play/Pause">
-              <i class="fa-solid fa-play"></i>
+            <button class="ps-ctl" id="psPlayPause" aria-label="Play/Pause" title="Play/Pause">
+              <i class="ri-play-fill"></i>
             </button>
-            <button class="ps-ctl" id="psRew" aria-label="Rewind 10s">
-              <i class="fa-solid fa-rotate-left"></i>
-              <span class="ps-ctl-mini">10</span>
-            </button>
-            <button class="ps-ctl" id="psFwd" aria-label="Forward 10s">
-              <i class="fa-solid fa-rotate-right"></i>
+
+            <button class="ps-ctl" id="psRew" aria-label="Rewind 10s" title="Rewind 10s">
+              <i class="ri-rewind-fill"></i>
               <span class="ps-ctl-mini">10</span>
             </button>
 
-            <div class="ps-time">
+            <button class="ps-ctl" id="psFwd" aria-label="Forward 10s" title="Forward 10s">
+              <i class="ri-speed-fill"></i>
+              <span class="ps-ctl-mini">10</span>
+            </button>
+
+            <div class="ps-time" aria-label="Time">
               <span id="psTimeNow">0:00</span>
               <span class="ps-time-sep">/</span>
               <span id="psTimeDur">0:00</span>
@@ -69,21 +85,22 @@
           </div>
 
           <div class="ps-controls-right">
-            <button class="ps-ctl" id="psFitFill" aria-label="Fit or Fill">FIT</button>
+            <button class="ps-ctl ps-ctl-text" id="psFitFill" aria-label="Fit or Fill" title="Fit/Fill">FILL</button>
 
             <div class="ps-vol">
-              <button class="ps-ctl" id="psMute" aria-label="Mute">
-                <i class="fa-solid fa-volume-high"></i>
+              <button class="ps-ctl" id="psMute" aria-label="Mute" title="Mute">
+                <i class="ri-volume-up-fill"></i>
               </button>
               <input id="psVol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
             </div>
 
-            <button class="ps-ctl" id="psNext" aria-label="Next episode" <%= nextEp ? '' : 'disabled' %>>
-              <i class="fa-solid fa-forward-step"></i>
+            <button class="ps-ctl" id="psNext" aria-label="Next episode" title="Next"
+              <%= nextEp ? '' : 'disabled' %>>
+              <i class="ri-skip-forward-fill"></i>
             </button>
 
-            <button class="ps-ctl" id="psFs" aria-label="Fullscreen">
-              <i class="fa-solid fa-expand"></i>
+            <button class="ps-ctl" id="psFs" aria-label="Fullscreen" title="Fullscreen">
+              <i class="ri-aspect-ratio-line"></i>
             </button>
           </div>
         </div>
